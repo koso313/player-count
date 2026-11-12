@@ -54,6 +54,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.Notification;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ClientShutdown;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.WorldsFetch;
 import net.runelite.client.game.WorldService;
@@ -570,6 +571,13 @@ public class PlayerCountPlugin extends Plugin
 			updateSuggestion();
 			pushPanel();
 		}
+	}
+
+	/** Closing RuneLite doesn't stop plugins, so save here too (and make the client wait for it). */
+	@Subscribe
+	public void onClientShutdown(ClientShutdown e)
+	{
+		e.waitFor(executor.submit(this::saveData));
 	}
 
 	@Subscribe
