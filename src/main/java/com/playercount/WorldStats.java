@@ -44,8 +44,6 @@ final class WorldStats
 		WorldType.DEADMAN,
 		WorldType.SEASONAL);
 
-	/** Special worlds a theme may still send you to (safe minigames); everything else special stays blocked. */
-	private static final Set<WorldType> THEME_ALLOWED = EnumSet.of(WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
 
 	private static final Pattern SKILL_TOTAL = Pattern.compile("(\\d{3,4})");
 
@@ -197,12 +195,10 @@ final class WorldStats
 		{
 			return false;
 		}
-		for (WorldType t : w.getTypes())
+		// Themed worlds may be any type (the user named the theme); everywhere else special worlds are skipped.
+		if (!themed && isSpecial(w))
 		{
-			if (SPECIAL.contains(t) && !(themed && THEME_ALLOWED.contains(t)))
-			{
-				return false;
-			}
+			return false;
 		}
 		if (w.getTypes().contains(WorldType.MEMBERS) != c.isMembers())
 		{
@@ -339,6 +335,52 @@ final class WorldStats
 				&& w.getActivity().toLowerCase(Locale.ROOT).contains(needle))
 			.max(Comparator.comparingInt(World::getPlayers).thenComparingInt(w -> -w.getId()))
 			.orElse(null);
+	}
+
+	/**
+	 * Short warning for worlds where you can lose items or that need a separate account/mode,
+	 * e.g. "PvP" or "Leagues"; null for ordinary (and safe minigame) worlds.
+	 */
+	static String risk(World w)
+	{
+		java.util.EnumSet<WorldType> t = w.getTypes();
+		if (t.contains(WorldType.DEADMAN))
+		{
+			return "Deadman";
+		}
+		if (t.contains(WorldType.HIGH_RISK))
+		{
+			return "High risk";
+		}
+		if (t.contains(WorldType.BOUNTY))
+		{
+			return "Bounty Hunter";
+		}
+		if (t.contains(WorldType.PVP))
+		{
+			return "PvP";
+		}
+		if (t.contains(WorldType.SEASONAL))
+		{
+			return "Leagues";
+		}
+		if (t.contains(WorldType.BETA_WORLD))
+		{
+			return "Beta";
+		}
+		if (t.contains(WorldType.QUEST_SPEEDRUNNING))
+		{
+			return "Speedrun";
+		}
+		if (t.contains(WorldType.FRESH_START_WORLD))
+		{
+			return "Fresh start";
+		}
+		if (t.contains(WorldType.TOURNAMENT) || t.contains(WorldType.NOSAVE_MODE))
+		{
+			return "Tournament";
+		}
+		return null;
 	}
 
 	/** True for PvP, Deadman, seasonal and other worlds the finder never suggests. */

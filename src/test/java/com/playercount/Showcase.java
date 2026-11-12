@@ -134,6 +134,14 @@ public class Showcase
 			ImageIO.write(layout == PlayerCountConfig.Layout.VERTICAL ? onGrass(row, 3) : stacked(row, 3), "png", new File(out, "sizes-" + name + "-3x.png"));
 		}
 
+		// Risky-world warning (Themed worlds)
+		List<OverlayLayout.Item> risky = new ArrayList<>();
+		risky.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).star(true));
+		risky.add(OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
+		risky.add(OverlayLayout.Item.line("Themed worlds").add("W325 (512) US", OverlayLayout.RISK).add(" 41ms", PlayerCountOverlay.UP).add(" PvP", OverlayLayout.RISK).warn(true));
+		ImageIO.write(onGrass(Arrays.asList(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, risky)), 3),
+			"png", new File(out, "overlay-warning.png"));
+
 		// Sidebar
 		WorldResult result = new WorldResult();
 		result.setWorlds(worlds);

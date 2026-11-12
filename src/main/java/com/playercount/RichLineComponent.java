@@ -32,6 +32,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 	private Rectangle tracked;
 	private boolean underline;
 	private boolean star;
+	private boolean glow;
 
 	private final Rectangle bounds = new Rectangle();
 	private Point preferredLocation = new Point();
@@ -63,6 +64,13 @@ class RichLineComponent implements LayoutableRenderableEntity
 	RichLineComponent underline(boolean on)
 	{
 		this.underline = on;
+		return this;
+	}
+
+	/** Pulsing red glow around the line (risky world). */
+	RichLineComponent glow(boolean on)
+	{
+		this.glow = on;
 		return this;
 	}
 
@@ -109,6 +117,10 @@ class RichLineComponent implements LayoutableRenderableEntity
 		int x = preferredLocation.x;
 		int baseline = preferredLocation.y + fm.getHeight();
 
+		if (glow)
+		{
+			OverlayLayout.glow(graphics, x - 2, preferredLocation.y, preferredSize.width + 4, fm.getHeight() + 2);
+		}
 		text(graphics, left, leftColor, x, baseline);
 		if (star)
 		{

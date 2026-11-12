@@ -92,7 +92,7 @@ public class FinderAndStorageTest
 	}
 
 	@Test
-	public void themedWorldsMatchActivitiesAndAllowSafeMinigames()
+	public void themedWorldsMatchActivitiesIncludingRiskyOnes()
 	{
 		List<World> worlds = Arrays.asList(
 			themed(307, 400, "Wintertodt"),
@@ -103,14 +103,17 @@ public class FinderAndStorageTest
 			themed(325, 500, "PvP world - Wintertodt fans", WorldType.PVP));
 		java.util.List<String> themes = Arrays.asList(" wintertodt", "TEMPOROSS", "last man");
 		List<World> busiest = WorldStats.rank(worlds, base().themes(themes).mode(WorldStats.Mode.THEMED_BUSIEST).build());
-		assertEquals(Arrays.asList(309, 307, 319, 320), ids(busiest)); // PvP world never, LMS allowed by theme
+		assertEquals(Arrays.asList(309, 325, 307, 319, 320), ids(busiest)); // risky worlds allowed in Themed (warned)
+		assertEquals("PvP", WorldStats.risk(worlds.get(5)));
+		assertNull(WorldStats.risk(worlds.get(4))); // LMS is a safe minigame
+		assertNull(WorldStats.risk(worlds.get(0)));
 		Map<Integer, Integer> pings = map(307, 20, 309, 200, 320, 40, 319, 60);
 		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BY_PING).build()).getId());
 		// Both: 307 = 0.1 ping + 0.56 quietness = 0.66 beats 309 = 1.0 + 0 = 1.0
 		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BALANCED).build()).getId());
 		assertNull(WorldStats.pick(worlds, base().mode(WorldStats.Mode.THEMED_BUSIEST).build())); // no themes
-		// Outside Themed mode an LMS world is still never suggested
-		assertTrue(WorldStats.rank(worlds, base().build()).stream().noneMatch(w -> w.getId() == 319));
+		// Outside Themed mode special worlds are still never suggested
+		assertTrue(WorldStats.rank(worlds, base().build()).stream().noneMatch(w -> w.getId() == 319 || w.getId() == 325));
 	}
 
 	private static World themed(int id, int players, String activity, WorldType... extra)

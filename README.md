@@ -48,8 +48,12 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 - Find the **quietest**, **busiest** or **lowest ping** world, cycle through your **favourites**, or
   turn the finder **off**.
 - **Themed worlds**: list activities (`Wintertodt, Tempoross, Trade`) and the finder rotates through
-  every world running them, busiest first, lowest ping first, or both. PvP Arena and Last Man Standing
-  worlds are allowed if you name them; dangerous and separate-account worlds never are.
+  every world running them, busiest first, lowest ping first, or both. Themed is the only mode that can
+  suggest PvP, high-risk, Bounty Hunter, Deadman, Leagues, beta, speedrun or fresh-start worlds. When it
+  does, the world **glows red** in the overlay and sidebar and chat warns you as you hop. You can turn
+  the warning off.
+
+  ![Risky world warning](docs/overlay-warning.png)
 - **Favourites**: list worlds in the settings (`302, 330, 420`) or star them in the sidebar. Order them
   by **lowest ping**, **fewest players**, or **both** weighed together. **Next world** cycles through
   them in that order and starts over after the last one. A **gold star** beside your world in the

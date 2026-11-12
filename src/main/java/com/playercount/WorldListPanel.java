@@ -93,6 +93,7 @@ class WorldListPanel extends PluginPanel
 		World suggestion;
 		String finderLabel;
 		boolean finderOff;
+		boolean warnRisky;
 		Instant updated;
 	}
 
@@ -439,8 +440,15 @@ class WorldListPanel extends PluginPanel
 		else
 		{
 			World sug = s.getSuggestion();
-			hopButton.setText(sug == null ? "No match" : "Hop W" + sug.getId() + " (" + sug.getPlayers() + ")");
-			hopButton.setToolTipText(s.getFinderLabel() + " world matching your finder settings");
+			String risk = sug != null && s.isWarnRisky() ? WorldStats.risk(sug) : null;
+			hopButton.setText(sug == null ? "No match" : "Hop W" + sug.getId() + (risk != null ? " " + risk + "!" : " (" + sug.getPlayers() + ")"));
+			hopButton.setForeground(risk != null ? OverlayLayout.RISK : Color.WHITE);
+			hopButton.setBorder(BorderFactory.createCompoundBorder(
+				BorderFactory.createLineBorder(risk != null ? OverlayLayout.RISK : ColorScheme.MEDIUM_GRAY_COLOR, risk != null ? 2 : 1),
+				BorderFactory.createEmptyBorder(risk != null ? 4 : 5, 6, risk != null ? 4 : 5, 6)));
+			hopButton.setToolTipText(risk != null
+				? "Careful: world " + sug.getId() + " is a " + risk + " world"
+				: s.getFinderLabel() + " world matching your finder settings");
 			hopButton.setEnabled(sug != null);
 			nextButton.setEnabled(true);
 		}
@@ -695,6 +703,15 @@ class WorldListPanel extends PluginPanel
 			{
 				g.setColor(ColorScheme.BRAND_ORANGE);
 				g.fillRect(0, 0, 3, ROW_HEIGHT);
+			}
+			if (s != null && s.isWarnRisky() && WorldStats.risk(world) != null)
+			{
+				g.setColor(new Color(255, 40, 30, 40));
+				g.fillRect(0, 0, w, ROW_HEIGHT - 1);
+				g.setColor(new Color(255, 64, 48, 200));
+				g.drawRect(1, 1, w - 3, ROW_HEIGHT - 4);
+				g.setColor(new Color(255, 64, 48, 90));
+				g.drawRect(2, 2, w - 5, ROW_HEIGHT - 6);
 			}
 
 			star(g, 11, 12, fav);

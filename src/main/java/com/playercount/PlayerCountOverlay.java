@@ -357,8 +357,11 @@ class PlayerCountOverlay extends Overlay
 			else
 			{
 				int ping = config.pingEnabled() ? plugin.pingOf(s.getId()) : -1;
-				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), UP)
-					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping)).target(s));
+				String risk = config.warnRisky() ? WorldStats.risk(s) : null;
+				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), risk != null ? OverlayLayout.RISK : UP)
+					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping))
+					.add(risk == null ? "" : " " + risk, OverlayLayout.RISK)
+					.target(s).warn(risk != null));
 			}
 		}
 

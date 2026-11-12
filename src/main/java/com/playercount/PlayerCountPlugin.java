@@ -1044,6 +1044,11 @@ public class PlayerCountPlugin extends Plugin
 
 		hopTarget = rs;
 		hopAttempts = 0;
+		String risk = config.warnRisky() ? WorldStats.risk(target) : null;
+		if (risk != null)
+		{
+			chat(String.format("<col=ff4030>Careful: world %d is a %s world.</col>", target.getId(), risk));
+		}
 		chat(String.format("Hopping to world %d (%,d players).", target.getId(), target.getPlayers()));
 	}
 
@@ -1215,6 +1220,7 @@ public class PlayerCountPlugin extends Plugin
 			.suggestion(suggestion)
 			.finderLabel(config.finderMode().toString())
 			.finderOff(config.finderMode() == PlayerCountConfig.FinderMode.OFF)
+			.warnRisky(config.warnRisky())
 			.updated(getLastUpdate())
 			.build());
 	}

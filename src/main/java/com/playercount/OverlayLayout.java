@@ -53,6 +53,8 @@ final class OverlayLayout
 		boolean hovered;
 		/** Draw a gold star after the label (your current world is a favourite). */
 		boolean star;
+		/** Glow red: this world is risky (PvP, Deadman, separate-account...). */
+		boolean warn;
 		/** Where the line was drawn last, in the overlay's unscaled coordinates (filled in while rendering). */
 		final Rectangle hitBox = new Rectangle();
 
@@ -97,6 +99,12 @@ final class OverlayLayout
 		Item star(boolean on)
 		{
 			this.star = on;
+			return this;
+		}
+
+		Item warn(boolean on)
+		{
+			this.warn = on;
 			return this;
 		}
 	}
@@ -160,7 +168,7 @@ final class OverlayLayout
 					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star).glow(item.warn);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
@@ -258,6 +266,10 @@ final class OverlayLayout
 					x += d;
 				}
 				int cw = cellWidth(item, small, value);
+				if (item.warn)
+				{
+					glow(g, x + 1, y - 1, cw - 2, h + 2);
+				}
 				if (item.isGraph())
 				{
 					GraphComponent graph = new GraphComponent(item.graph, item.now, item.window, h, false);
@@ -375,6 +387,27 @@ final class OverlayLayout
 			w += Character.isDigit(c) ? widest : fm.charWidth(c);
 		}
 		return w;
+	}
+
+	static final Color RISK = new Color(0xFF, 0x40, 0x30);
+
+	/** A pulsing red glow around a box, to flag a risky world. */
+	static void glow(Graphics2D g, int x, int y, int w, int h)
+	{
+		double pulse = 0.55 + 0.45 * Math.sin(System.currentTimeMillis() / 220.0);
+		Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setColor(new Color(255, 40, 30, (int) (40 * pulse)));
+		g.fillRoundRect(x, y, w, h, 6, 6);
+		for (int i = 0; i < 3; i++)
+		{
+			g.setColor(new Color(255, 60, 40, (int) ((170 - i * 55) * pulse)));
+			g.drawRoundRect(x - i, y - i, w - 1 + 2 * i, h - 1 + 2 * i, 6 + 2 * i, 6 + 2 * i);
+		}
+		if (aa != null)
+		{
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+		}
 	}
 
 	/** A small gold five-pointed star with a dark outline, centred on (x + r, cy). */
