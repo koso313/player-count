@@ -152,7 +152,7 @@ public class Showcase
 			.build();
 		ImageIO.write(sidebar(state), "png", new File(out, "sidebar.png"));
 
-		ImageIO.write(Icons.globe(48), "png", new File(out, "icon.png"));
+		ImageIO.write(Icons.pluginIcon(48), "png", new File(out, "icon.png"));
 		System.out.println("Wrote screenshots to " + out.getAbsolutePath());
 		System.exit(0);
 	}

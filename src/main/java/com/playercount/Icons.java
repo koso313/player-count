@@ -81,6 +81,54 @@ final class Icons
 		return p;
 	}
 
+	/**
+	 * The Plugin Hub / README icon: the globe with an orange badge holding two player silhouettes.
+	 * (The sidebar button uses the plain globe; the badge is too small to read at 16px.)
+	 */
+	static BufferedImage pluginIcon(int size)
+	{
+		BufferedImage globe = globe(size * 8);
+		int big = size * 8;
+		BufferedImage img = new BufferedImage(big, big, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = img.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.drawImage(globe, 0, 0, null);
+
+		float r = big * 0.25f;
+		float cx = big * 0.73f;
+		float cy = big * 0.73f;
+		Shape badge = new Ellipse2D.Float(cx - r, cy - r, 2 * r, 2 * r);
+		g.setColor(new Color(0x0C, 0x24, 0x44));
+		g.fill(new Ellipse2D.Float(cx - r * 1.14f, cy - r * 1.14f, 2.28f * r, 2.28f * r));
+		g.setPaint(new RadialGradientPaint(cx - r * 0.3f, cy - r * 0.4f, r * 1.3f,
+			new float[]{0f, 1f}, new Color[]{new Color(0xFF, 0xB8, 0x4A), new Color(0xD9, 0x6E, 0x0A)}));
+		g.fill(badge);
+
+		// Two players: one behind (paler), one in front, each ringed in the badge colour so they separate
+		g.setClip(badge);
+		Color ring = new Color(0xE8, 0x80, 0x18);
+		person(g, cx + r * 0.36f, cy + r * 0.02f, r * 0.58f, new Color(255, 226, 190), ring);
+		person(g, cx - r * 0.16f, cy + r * 0.16f, r * 0.70f, Color.WHITE, ring);
+		g.setClip(null);
+		g.dispose();
+		return scaleDown(img, size);
+	}
+
+	/** Head and shoulders; {@code s} is roughly the figure's half-width. */
+	private static void person(Graphics2D g, float cx, float cy, float s, Color c, Color ring)
+	{
+		float head = s * 0.9f;
+		Shape headShape = new Ellipse2D.Float(cx - head / 2, cy - s * 1.25f, head, head);
+		Shape body = new Ellipse2D.Float(cx - s, cy - s * 0.2f, s * 2, s * 2.2f);
+		g.setColor(ring);
+		g.setStroke(new BasicStroke(s * 0.28f));
+		g.draw(headShape);
+		g.draw(body);
+		g.setColor(c);
+		g.fill(headShape);
+		g.fill(body);
+	}
+
 	/** Halves repeatedly with bilinear filtering, which keeps small icons crisp without jaggies. */
 	private static BufferedImage scaleDown(BufferedImage src, int size)
 	{

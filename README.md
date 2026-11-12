@@ -1,5 +1,7 @@
 # Player Count
 
+<img src="icon.png" width="48" alt="Player Count icon">
+
 A movable overlay for Old School RuneScape showing how many people are on your world and in the
 whole game, plus a world finder, a live world list in the sidebar, ping, alerts and population
 history.
