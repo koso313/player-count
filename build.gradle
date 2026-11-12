@@ -77,3 +77,10 @@ tasks.register('showcase', JavaExec) {
 	mainClass = 'com.playercount.Showcase'
 	args project.findProperty('sprites') ?: 'sprites', project.findProperty('out') ?: 'docs'
 }
+
+// Renders the region-breakdown design options (development aid).
+tasks.register('regionPreview', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.playercount.RegionPreview'
+	args project.findProperty('sprites') ?: 'sprites', project.findProperty('out') ?: 'build'
+}

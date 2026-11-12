@@ -363,7 +363,7 @@ class PlayerCountOverlay extends Overlay
 				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), risk != null ? OverlayLayout.RISK : UP)
 					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping))
 					.add(risk == null ? "" : " " + risk, OverlayLayout.RISK)
-					.target(s).warn(risk != null));
+					.target(s).warn(risk != null).pulse(risk != null && WorldStats.deadly(s)));
 			}
 		}
 

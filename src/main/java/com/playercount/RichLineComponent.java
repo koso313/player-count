@@ -33,6 +33,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 	private boolean underline;
 	private boolean star;
 	private boolean glow;
+	private boolean pulse;
 
 	private final Rectangle bounds = new Rectangle();
 	private Point preferredLocation = new Point();
@@ -67,10 +68,11 @@ class RichLineComponent implements LayoutableRenderableEntity
 		return this;
 	}
 
-	/** Pulsing red glow around the line (risky world). */
-	RichLineComponent glow(boolean on)
+	/** Red glow around the line (risky world), pulsing if you can die anywhere there. */
+	RichLineComponent glow(boolean on, boolean pulsing)
 	{
 		this.glow = on;
+		this.pulse = pulsing;
 		return this;
 	}
 
@@ -119,7 +121,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 
 		if (glow)
 		{
-			OverlayLayout.glow(graphics, x - 2, preferredLocation.y, preferredSize.width + 4, fm.getHeight() + 2);
+			OverlayLayout.glow(graphics, x - 2, preferredLocation.y, preferredSize.width + 4, fm.getHeight() + 2, pulse);
 		}
 		text(graphics, left, leftColor, x, baseline);
 		if (star)

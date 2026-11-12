@@ -361,7 +361,19 @@ final class WorldStats
 		{
 			return "Tournament";
 		}
+		// Ordinary worlds set aside for Wilderness PKing: not PvP everywhere, but you're there to fight.
+		String activity = w.getActivity() == null ? "" : w.getActivity().toLowerCase(java.util.Locale.ROOT);
+		if (activity.contains("wilderness pk"))
+		{
+			return "Wildy PK";
+		}
 		return null;
+	}
+
+	/** PvP and Deadman worlds: you can be attacked almost anywhere (these get the pulsing warning). */
+	static boolean deadly(World w)
+	{
+		return w.getTypes().contains(WorldType.PVP) || w.getTypes().contains(WorldType.DEADMAN);
 	}
 
 	/** True for PvP, Deadman, seasonal and other worlds the finder never suggests. */

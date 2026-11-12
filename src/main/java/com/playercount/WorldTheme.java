@@ -58,7 +58,8 @@ public enum WorldTheme
 	PVP_ARENA("PvP Arena", "pvp arena"),
 	HARDCORE("Hardcore worlds", "hardcore"),
 	// Risky or separate-account: warned in red
-	PVP("PvP worlds", WorldType.PVP, "pvp world", "wilderness pk"),
+	WILDERNESS_PK("Wilderness PK", "wilderness pk"),
+	PVP("PvP worlds", WorldType.PVP, "pvp world"),
 	HIGH_RISK("High risk", WorldType.HIGH_RISK, "high risk"),
 	BOUNTY_HUNTER("Bounty Hunter", WorldType.BOUNTY, "bounty hunter"),
 	DEADMAN("Deadman", WorldType.DEADMAN, "deadman"),

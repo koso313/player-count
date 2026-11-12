@@ -114,6 +114,12 @@ public class FinderAndStorageTest
 		assertEquals(325, pvp.getId());
 		assertEquals("PvP", WorldStats.risk(pvp));
 		assertNull(WorldStats.risk(worlds.get(5))); // LMS is a safe minigame
+		World wildy = themed(369, 699, "Wilderness PK - Members");
+		assertEquals("Wildy PK", WorldStats.risk(wildy));
+		assertTrue(!WorldStats.deadly(wildy)); // only the Wilderness is dangerous
+		assertTrue(WorldStats.deadly(pvp));
+		assertTrue(WorldTheme.WILDERNESS_PK.matches(wildy));
+		assertTrue(!WorldTheme.PVP.matches(wildy));
 		assertTrue(WorldStats.rank(worlds, base().build()).stream().noneMatch(w -> w.getId() == 319 || w.getId() == 325));
 		assertNull(WorldStats.pick(worlds, base().mode(WorldStats.Mode.THEMED_BUSIEST).build())); // no theme chosen
 	}

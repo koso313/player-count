@@ -55,6 +55,12 @@ final class OverlayLayout
 		boolean star;
 		/** Glow red: this world is risky (PvP, Deadman, separate-account...). */
 		boolean warn;
+		/** Pulse the glow: you can die almost anywhere on this world (PvP, Deadman). */
+		boolean pulse;
+		/** A custom graphic (e.g. region map) instead of text; made fresh each frame. */
+		java.util.function.Supplier<LayoutableRenderableEntity> component;
+		/** Width of the custom graphic's cell in the horizontal strip. */
+		int componentWidth;
 		/** Where the line was drawn last, in the overlay's unscaled coordinates (filled in while rendering). */
 		final Rectangle hitBox = new Rectangle();
 
@@ -74,6 +80,15 @@ final class OverlayLayout
 		static Item graph(List<PopulationHistory.Point> points, Instant now, Duration window)
 		{
 			return new Item("", points, now, window);
+		}
+
+		/** A custom graphic: its own row in the vertical layout, a {@code stripWidth}-wide cell in the horizontal one. */
+		static Item custom(String key, java.util.function.Supplier<LayoutableRenderableEntity> make, int stripWidth)
+		{
+			Item i = new Item(key, null, null, null);
+			i.component = make;
+			i.componentWidth = stripWidth;
+			return i;
 		}
 
 		Item add(String text, Color color)
@@ -105,6 +120,12 @@ final class OverlayLayout
 		Item warn(boolean on)
 		{
 			this.warn = on;
+			return this;
+		}
+
+		Item pulse(boolean on)
+		{
+			this.pulse = on;
 			return this;
 		}
 	}
@@ -161,6 +182,11 @@ final class OverlayLayout
 		}
 		for (Item item : items)
 		{
+			if (item.component != null)
+			{
+				panel.getChildren().add(item.component.get());
+				continue;
+			}
 			if (item.isGraph())
 			{
 				panel.getChildren().add(compact
@@ -168,7 +194,7 @@ final class OverlayLayout
 					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star).glow(item.warn);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star).glow(item.warn, item.pulse);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
@@ -229,6 +255,10 @@ final class OverlayLayout
 
 		private int cellWidth(Item item, FontMetrics small, FontMetrics value)
 		{
+			if (item.component != null)
+			{
+				return item.componentWidth;
+			}
 			if (item.isGraph())
 			{
 				return graphWidth;
@@ -268,9 +298,16 @@ final class OverlayLayout
 				int cw = cellWidth(item, small, value);
 				if (item.warn)
 				{
-					glow(g, x + 1, y - 1, cw - 2, h + 2);
+					glow(g, x + 1, y - 1, cw - 2, h + 2, item.pulse);
 				}
-				if (item.isGraph())
+				if (item.component != null)
+				{
+					LayoutableRenderableEntity c = item.component.get();
+					c.setPreferredLocation(new Point(x + 3, y));
+					c.setPreferredSize(new Dimension(cw - 6, h));
+					c.render(g);
+				}
+				else if (item.isGraph())
 				{
 					GraphComponent graph = new GraphComponent(item.graph, item.now, item.window, h, false);
 					graph.setPreferredLocation(new Point(x + 3, y));
@@ -391,10 +428,10 @@ final class OverlayLayout
 
 	static final Color RISK = new Color(0xFF, 0x40, 0x30);
 
-	/** A pulsing red glow around a box, to flag a risky world. */
-	static void glow(Graphics2D g, int x, int y, int w, int h)
+	/** A red glow around a box to flag a risky world; it pulses only for worlds where you can die anywhere. */
+	static void glow(Graphics2D g, int x, int y, int w, int h, boolean pulsing)
 	{
-		double pulse = 0.55 + 0.45 * Math.sin(System.currentTimeMillis() / 220.0);
+		double pulse = pulsing ? 0.55 + 0.45 * Math.sin(System.currentTimeMillis() / 220.0) : 0.8;
 		Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(new Color(255, 40, 30, (int) (40 * pulse)));

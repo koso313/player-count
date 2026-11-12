@@ -1047,7 +1047,9 @@ public class PlayerCountPlugin extends Plugin
 		String risk = config.warnRisky() ? WorldStats.risk(target) : null;
 		if (risk != null)
 		{
-			chat(String.format("<col=ff4030>Careful: world %d is a %s world.</col>", target.getId(), risk));
+			chat(WorldStats.deadly(target)
+				? String.format("<col=ff4030>Careful: world %d is a %s world - you can be attacked almost anywhere.</col>", target.getId(), risk)
+				: String.format("<col=ff4030>Heads up: world %d is a %s world.</col>", target.getId(), risk));
 		}
 		chat(String.format("Hopping to world %d (%,d players).", target.getId(), target.getPlayers()));
 	}
