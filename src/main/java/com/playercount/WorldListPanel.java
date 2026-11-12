@@ -77,6 +77,22 @@ class WorldListPanel extends PluginPanel
 		void setFavorite(int world, boolean on);
 
 		void refresh();
+
+		/** Remember a sidebar filter (key, value) between sessions. */
+		void saveSetting(String key, String value);
+	}
+
+	/** Sidebar filters as last saved. */
+	@Value
+	@Builder
+	static class Filters
+	{
+		String sort;
+		int membership;
+		String region;
+		String theme;
+		boolean hidePvp;
+		boolean open;
 	}
 
 	@Value
@@ -189,6 +205,11 @@ class WorldListPanel extends PluginPanel
 
 	WorldListPanel(Actions actions)
 	{
+		this(actions, Filters.builder().sort("PING").membership(0).region("").theme("").hidePvp(true).open(true).build());
+	}
+
+	WorldListPanel(Actions actions, Filters saved)
+	{
 		super(false);
 		this.actions = actions;
 		setLayout(new BorderLayout(0, 6));
@@ -288,6 +309,7 @@ class WorldListPanel extends PluginPanel
 		scroll.setBorder(BorderFactory.createEmptyBorder());
 		scroll.getVerticalScrollBar().setUnitIncrement(ROW_HEIGHT / 2);
 		add(scroll, BorderLayout.CENTER);
+		applySaved(saved);
 	}
 
 	// ---- Layout pieces ----
@@ -585,6 +607,7 @@ class WorldListPanel extends PluginPanel
 		{
 			filtersPanel.setVisible(!filtersPanel.isVisible());
 			revalidate();
+			actions.saveSetting("sidebarFiltersOpen", String.valueOf(filtersPanel.isVisible()));
 		});
 		JPanel searchRow = new JPanel(new BorderLayout(6, 0));
 		searchRow.setOpaque(false);
@@ -649,12 +672,66 @@ class WorldListPanel extends PluginPanel
 				rebuild();
 			}
 		});
-		membership.addActionListener(e -> rebuild());
-		region.addActionListener(e -> rebuild());
-		sort.addActionListener(e -> rebuild());
-		theme.addActionListener(e -> rebuild());
-		hideSpecial.addActionListener(e -> rebuild());
+		membership.addActionListener(e ->
+		{
+			rebuild();
+			actions.saveSetting("sidebarMembership", String.valueOf(membership.getSelectedIndex()));
+		});
+		region.addActionListener(e ->
+		{
+			rebuild();
+			actions.saveSetting("sidebarRegion", region.getSelectedIndex() <= 0 ? "" : String.valueOf(region.getSelectedItem()));
+		});
+		sort.addActionListener(e ->
+		{
+			rebuild();
+			actions.saveSetting("sidebarSort", ((Sort) sort.getSelectedItem()).name());
+		});
+		theme.addActionListener(e ->
+		{
+			rebuild();
+			Object t = theme.getSelectedItem();
+			actions.saveSetting("sidebarTheme", t instanceof WorldTheme ? ((WorldTheme) t).name() : "");
+		});
+		hideSpecial.addActionListener(e ->
+		{
+			rebuild();
+			actions.saveSetting("sidebarHidePvp", String.valueOf(hideSpecial.isSelected()));
+		});
 		return p;
+	}
+
+	/** Puts the filters back the way they were last session. */
+	private void applySaved(Filters saved)
+	{
+		for (Sort o : Sort.values())
+		{
+			if (o.name().equals(saved.getSort()))
+			{
+				sort.setSelectedItem(o);
+			}
+		}
+		if (saved.getMembership() >= 0 && saved.getMembership() < membership.getItemCount())
+		{
+			membership.setSelectedIndex(saved.getMembership());
+		}
+		for (int i = 1; i < region.getItemCount(); i++)
+		{
+			if (String.valueOf(region.getItemAt(i)).equals(saved.getRegion()))
+			{
+				region.setSelectedIndex(i);
+			}
+		}
+		for (int i = 1; i < theme.getItemCount(); i++)
+		{
+			Object t = theme.getItemAt(i);
+			if (t instanceof WorldTheme && ((WorldTheme) t).name().equals(saved.getTheme()))
+			{
+				theme.setSelectedIndex(i);
+			}
+		}
+		hideSpecial.setSelected(saved.isHidePvp());
+		filtersPanel.setVisible(saved.isOpen());
 	}
 
 	/** Opens or closes the filter panel (also used for screenshots). */

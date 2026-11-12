@@ -59,13 +59,13 @@ public interface PlayerCountConfig extends Config
 	@Units(Units.PERCENT)
 	default int frameOpacity()
 	{
-		return 90;
+		return 60;
 	}
 
 	@ConfigItem(keyName = SIZE_KEY, name = "Size", description = "Full, Medium (the game's small font) or Small (short labels on one line). Each is drawn at native size so text stays sharp. Alt-dragging the overlay's corner also switches size.", section = lookSection, position = 2)
 	default OverlaySize overlaySize()
 	{
-		return OverlaySize.FULL;
+		return OverlaySize.MEDIUM;
 	}
 
 	@ConfigItem(keyName = "layout", name = "Layout", description = "Vertical list, or a horizontal strip", section = lookSection, position = 3)
@@ -109,13 +109,13 @@ public interface PlayerCountConfig extends Config
 	@ConfigItem(keyName = "showMembersSplit", name = "Members / F2P split", description = "Total split into members and free-to-play worlds", section = linesSection, position = 4)
 	default boolean showMembersSplit()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(keyName = "regionDisplay", name = "Regions", description = "Players per region: one line each, the top regions on one line, a share bar, or a world map of glowing players (hover a region for its count)", section = linesSection, position = 5)
 	default RegionDisplay regionDisplay()
 	{
-		return RegionDisplay.OFF;
+		return RegionDisplay.MAP;
 	}
 
 	@ConfigItem(keyName = "showNearby", name = "Nearby players", description = "Other players within render distance", section = linesSection, position = 7)
@@ -183,20 +183,58 @@ public interface PlayerCountConfig extends Config
 	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for (Themed worlds also covers your favourites), or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full (Themed worlds is the exception: it can suggest any world whose activity matches, with a red warning on risky ones).", section = finderSection, position = 0)
 	default FinderMode finderMode()
 	{
-		return FinderMode.QUIETEST;
+		return FinderMode.LOWEST_PING;
 	}
 
 
 	@ConfigItem(keyName = "theme", name = "Theme", description = "For Find: Themed worlds. Your favourites, a skill-total level, or an activity; the finder rotates through every matching world (Next world cycles them). Risky worlds are warned in red or orange.", section = finderSection, position = 1)
 	default WorldTheme theme()
 	{
-		return WorldTheme.WINTERTODT;
+		return WorldTheme.FAVOURITES;
 	}
 
 	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites (the finder filters for membership, region and max ping don't apply to favourites). The sidebar's stars and Favourites row edit this list too; deleting a world here removes it there. If these settings were open when you changed favourites in the sidebar, reopen them before editing this box.", section = finderSection, position = 2)
 	default String favoriteWorlds()
 	{
 		return "";
+	}
+
+	// ---- Sidebar filters (set from the sidebar itself, remembered between sessions) ----
+
+	@ConfigItem(keyName = "sidebarSort", name = "", description = "", hidden = true)
+	default String sidebarSort()
+	{
+		return "PING";
+	}
+
+	@ConfigItem(keyName = "sidebarMembership", name = "", description = "", hidden = true)
+	default int sidebarMembership()
+	{
+		return 0;
+	}
+
+	@ConfigItem(keyName = "sidebarRegion", name = "", description = "", hidden = true)
+	default String sidebarRegion()
+	{
+		return "";
+	}
+
+	@ConfigItem(keyName = "sidebarTheme", name = "", description = "", hidden = true)
+	default String sidebarTheme()
+	{
+		return "";
+	}
+
+	@ConfigItem(keyName = "sidebarHidePvp", name = "", description = "", hidden = true)
+	default boolean sidebarHidePvp()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "sidebarFiltersOpen", name = "", description = "", hidden = true)
+	default boolean sidebarFiltersOpen()
+	{
+		return true;
 	}
 
 	@ConfigItem(keyName = STARRED_KEY, name = "", description = "", hidden = true)
@@ -208,7 +246,7 @@ public interface PlayerCountConfig extends Config
 	@ConfigItem(keyName = "themedOrder", name = "Order", description = "For Find: Themed worlds (including Favourites), which world comes first and the order Next world rotates through them.", section = finderSection, position = 3)
 	default ThemedOrder themedOrder()
 	{
-		return ThemedOrder.BUSIEST;
+		return ThemedOrder.QUIET_AND_FAST;
 	}
 
 	@ConfigItem(keyName = "warnRisky", name = "Warn on risky worlds", description = "Themed worlds can include risky worlds. PvP-themed worlds (PvP, Deadman, High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena) pulse red; separate-account worlds (Leagues, beta, speedrun, fresh start) are orange with an orange underline. Chat warns as you hop.", section = finderSection, position = 4)
@@ -374,7 +412,7 @@ public interface PlayerCountConfig extends Config
 	@Units(Units.SECONDS)
 	default int pingInterval()
 	{
-		return 3;
+		return 30;
 	}
 
 	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to download Jagex's live world list", section = extrasSection, position = 3)

@@ -169,6 +169,31 @@ public class Showcase
 		ImageIO.write(sidebar(state), "png", new File(out, "sidebar.png"));
 		ImageIO.write(sidebar(state, true), "png", new File(out, "sidebar-filters.png"));
 
+		// Overview: the overlay (as a new install starts: steel, map) beside the sidebar
+		List<OverlayLayout.Item> hero = new ArrayList<>();
+		hero.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN).star(true));
+		hero.add(OverlayLayout.Item.line("Total").add("115,578", Color.WHITE).add(" (+158)", PlayerCountOverlay.UP));
+		hero.add(OverlayLayout.Item.line("P2P / F2P").add("107.8k / 7.8k", Color.WHITE));
+		WorldMap heroMap = new WorldMap();
+		hero.add(OverlayLayout.Item.custom("regions-map", () -> new WorldMapComponent(heroMap, WorldMap.stats(worlds), null, WorldStats.totals(worlds).getTotal(), 0), 200));
+		hero.add(OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
+		hero.add(OverlayLayout.Item.line("Nearby").add("14", Color.WHITE));
+		hero.add(OverlayLayout.Item.line("Lowest ping").add("W420 (1,071) US", PlayerCountOverlay.UP).add(" 22ms", PlayerCountOverlay.UP));
+		BufferedImage heroOverlay = overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, hero);
+		BufferedImage side = ImageIO.read(new File(out, "sidebar.png"));
+		int pad = 16;
+		int heroW = pad + heroOverlay.getWidth() * 2 + pad + side.getWidth() * 2 + pad;
+		int heroH = pad + Math.max(heroOverlay.getHeight() * 2, side.getHeight() * 2) + pad;
+		BufferedImage heroImg = new BufferedImage(heroW, heroH, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D hg = heroImg.createGraphics();
+		hg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+		hg.setColor(new Color(74, 90, 53));
+		hg.fillRect(0, 0, heroW, heroH);
+		hg.drawImage(heroOverlay, pad, pad, heroOverlay.getWidth() * 2, heroOverlay.getHeight() * 2, null);
+		hg.drawImage(side, pad * 2 + heroOverlay.getWidth() * 2, pad, side.getWidth() * 2, side.getHeight() * 2, null);
+		hg.dispose();
+		ImageIO.write(heroImg, "png", new File(out, "overview.png"));
+
 		ImageIO.write(Icons.pluginIcon(48), "png", new File(out, "icon.png"));
 		System.out.println("Wrote screenshots to " + out.getAbsolutePath());
 		System.exit(0);
@@ -334,6 +359,11 @@ public class Showcase
 
 				@Override
 				public void refresh()
+				{
+				}
+
+				@Override
+				public void saveSetting(String key, String value)
 				{
 				}
 			});

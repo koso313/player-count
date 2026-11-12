@@ -302,7 +302,20 @@ public class PlayerCountPlugin extends Plugin
 			{
 				refreshNow();
 			}
-		});
+
+			@Override
+			public void saveSetting(String key, String value)
+			{
+				configManager.setConfiguration(PlayerCountConfig.GROUP, key, value);
+			}
+		}, WorldListPanel.Filters.builder()
+			.sort(config.sidebarSort())
+			.membership(config.sidebarMembership())
+			.region(config.sidebarRegion())
+			.theme(config.sidebarTheme())
+			.hidePvp(config.sidebarHidePvp())
+			.open(config.sidebarFiltersOpen())
+			.build());
 		navButton = NavigationButton.builder()
 			.tooltip("Player Count")
 			.icon(Icons.globe(16))

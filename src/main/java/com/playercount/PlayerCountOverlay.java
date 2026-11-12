@@ -87,7 +87,7 @@ class PlayerCountOverlay extends Overlay
 		this.spriteManager = spriteManager;
 		this.configManager = configManager;
 		this.overlayManager = overlayManager;
-		setPosition(OverlayPosition.TOP_LEFT);
+		setPosition(OverlayPosition.BOTTOM_LEFT);
 		setMovable(true);
 		setResizable(true);
 		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Hop to", "suggested world", e -> plugin.hopToSuggestion());

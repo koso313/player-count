@@ -6,9 +6,11 @@ A movable overlay for Old School RuneScape showing how many people are on your w
 whole game, plus a world finder, a live world list in the sidebar, ping, alerts and population
 history.
 
-![Overlay in the OSRS steel frame](docs/overlay-steel.png)
+![Player Count overlay and sidebar](docs/overview.png)
 
 ## Overlay
+
+![Overlay in the OSRS steel frame](docs/overlay-steel.png)
 
 - **Your world's player count** and the **OSRS total**, each with its change over the last minute
   (green for gains, red for losses).
