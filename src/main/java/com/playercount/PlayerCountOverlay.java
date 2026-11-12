@@ -5,9 +5,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
-import java.awt.geom.AffineTransform;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -34,8 +32,8 @@ import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldRegion;
 
 /**
- * The movable overlay. Drawn at its natural size and then scaled, so it can be resized
- * from the Size setting or by Alt-dragging its corner (the drag is turned into a new Size).
+ * The movable overlay. Always drawn 1:1 so the game's pixel fonts stay sharp; the Size setting
+ * (Full, Medium, Small) changes the layout instead, and Alt-dragging the corner switches between them.
  */
 class PlayerCountOverlay extends Overlay
 {
@@ -60,15 +58,14 @@ class PlayerCountOverlay extends Overlay
 	/** Unscaled size last frame; PanelComponent itself sizes from the previous frame too. */
 	private Dimension lastNatural;
 	/** Size on screen last frame, kept while hidden-until-hover so the hover area stays put. */
-	private Dimension lastScaled;
+	private Dimension lastSize;
 	/**
 	 * A preferred size already saved when the overlay first draws isn't a drag from this session
 	 * (older builds saved one), so it's discarded rather than turned into a Size.
 	 */
 	private boolean firstFrame = true;
-	/** Lines drawn last frame (with their hit boxes) and the scale used, for clicks and hover. */
+	/** Lines drawn last frame (with their hit boxes), for clicks and hover. */
 	private List<OverlayLayout.Item> lastItems = new ArrayList<>();
-	private double lastScale = 1;
 	/** Mini size this frame: short labels and compact numbers. */
 	private boolean mini;
 
@@ -91,8 +88,8 @@ class PlayerCountOverlay extends Overlay
 		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Hop to", "suggested world", e -> plugin.hopToSuggestion());
 		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Next", "world", e -> plugin.hopNext());
 		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Refresh", "player counts", e -> plugin.refreshNow());
-		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset size", "Player Count overlay",
-			e -> configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SCALE_KEY, 100));
+		addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Full size", "Player Count overlay",
+			e -> configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SIZE_KEY, PlayerCountConfig.OverlaySize.FULL));
 		addMenuEntry(MenuAction.RUNELITE_OVERLAY_CONFIG, OverlayManager.OPTION_CONFIGURE, "Player Count overlay");
 	}
 
@@ -104,12 +101,12 @@ class PlayerCountOverlay extends Overlay
 			lastItems = new ArrayList<>();
 			return null;
 		}
-		if (config.hideMode() == PlayerCountConfig.HideMode.UNTIL_HOVER && !hovered() && lastScaled != null)
+		if (config.hideMode() == PlayerCountConfig.HideMode.UNTIL_HOVER && !hovered() && lastSize != null)
 		{
 			// Keep the space (so hovering it brings the overlay back) with just a faint outline.
 			graphics.setColor(HIDDEN_HINT);
-			graphics.drawRect(0, 0, lastScaled.width - 1, lastScaled.height - 1);
-			return lastScaled;
+			graphics.drawRect(0, 0, lastSize.width - 1, lastSize.height - 1);
+			return lastSize;
 		}
 
 		PlayerCountConfig.FrameStyle style = config.frameStyle();
@@ -119,10 +116,11 @@ class PlayerCountOverlay extends Overlay
 		}
 		PlayerCountConfig.Layout layout = config.layout();
 
-		// Never shrink: pixel fonts and sprites smear when scaled down. Small sizes use the compact layout
-		// (the game's small font, native size) instead, sizes near 100% snap to native, larger ones scale up.
-		boolean compact = clampedSize() < PlayerCountConfig.COMPACT_BELOW;
-		mini = clampedSize() < PlayerCountConfig.MINI_BELOW;
+		// Sizes are layouts, never scaling: pixel fonts and sprites smear when scaled, so each size is
+		// drawn 1:1 (Medium uses the game's small font, Small also shortens labels onto one line).
+		PlayerCountConfig.OverlaySize size = config.overlaySize();
+		boolean compact = size != PlayerCountConfig.OverlaySize.FULL;
+		mini = size == PlayerCountConfig.OverlaySize.SMALL;
 		Font font = graphics.getFont();
 		if (compact)
 		{
@@ -137,17 +135,13 @@ class PlayerCountOverlay extends Overlay
 
 		Rectangle insets = FramePainter.insets(style, compact);
 		int naturalWidth = Math.max(OverlayLayout.minWidth(style, layout, compact), content + insets.x + insets.width + 2);
-		double scale = scale(naturalWidth);
+		snapDrag(naturalWidth, size);
 
 		panelComponent.setPreferredSize(new Dimension(naturalWidth, 0));
 		panelComponent.setBorder(insets);
 		boolean custom = style != PlayerCountConfig.FrameStyle.RUNELITE;
 		panelComponent.setBackgroundColor(custom ? null : ComponentConstants.STANDARD_BACKGROUND_COLOR);
 
-		AffineTransform before = graphics.getTransform();
-		Object interpolation = graphics.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
-		graphics.scale(scale, scale);
-		graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 		Dimension natural;
 		try
 		{
@@ -163,62 +157,54 @@ class PlayerCountOverlay extends Overlay
 		}
 		finally
 		{
-			graphics.setTransform(before);
-			if (interpolation != null)
-			{
-				graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, interpolation);
-			}
 			panelComponent.getChildren().clear();
 			graphics.setFont(font);
 		}
 
 		lastNatural = natural;
 		lastItems = items;
-		lastScale = scale;
 		if (natural == null)
 		{
 			return null;
 		}
-		lastScaled = new Dimension((int) Math.ceil(natural.width * scale), (int) Math.ceil(natural.height * scale));
-		return lastScaled;
+		lastSize = natural;
+		return lastSize;
 	}
 
 	/**
-	 * The Size setting as a factor. If the user has just Alt-dragged the corner, RuneLite will have set a
-	 * preferred size; that's converted into a new Size and cleared, so the drag scales instead of stretching.
+	 * Alt-dragging the corner makes RuneLite set a preferred size. Instead of stretching, that picks the
+	 * nearest of the three sizes (by how much wider or narrower than now the drag made it) and is cleared.
 	 */
-	private double scale(int naturalWidth)
+	private void snapDrag(int naturalWidth, PlayerCountConfig.OverlaySize current)
 	{
 		Dimension dragged = getPreferredSize();
-		if (dragged != null)
+		if (dragged == null)
 		{
-			setPreferredSize(null);
-			overlayManager.saveOverlay(this);
-			if (!firstFrame && dragged.width > 0)
-			{
-				int pct = (int) Math.round(dragged.width * 100.0 / naturalWidth);
-				pct = Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, pct));
-				if (pct != config.overlayScale())
-				{
-					configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SCALE_KEY, pct);
-				}
-				firstFrame = false;
-				return transformFor(pct);
-			}
+			firstFrame = false;
+			return;
 		}
-		firstFrame = false;
-		return transformFor(clampedSize());
-	}
-
-	private int clampedSize()
-	{
-		return Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, config.overlayScale()));
-	}
-
-	/** How much to scale the drawing for a Size: never below 1 (compact handles small sizes), native up to 110%. */
-	static double transformFor(int pct)
-	{
-		return pct <= 110 ? 1.0 : pct / 100.0;
+		setPreferredSize(null);
+		overlayManager.saveOverlay(this);
+		if (firstFrame || dragged.width <= 0)
+		{
+			firstFrame = false; // saved by an older build, not a drag from this session
+			return;
+		}
+		double ratio = dragged.width / (double) naturalWidth;
+		PlayerCountConfig.OverlaySize[] sizes = PlayerCountConfig.OverlaySize.values(); // FULL, MEDIUM, SMALL
+		int i = current.ordinal();
+		if (ratio < 0.85 && i < sizes.length - 1)
+		{
+			i++;
+		}
+		else if (ratio > 1.15 && i > 0)
+		{
+			i--;
+		}
+		if (sizes[i] != current)
+		{
+			configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SIZE_KEY, sizes[i]);
+		}
 	}
 
 	/** Underlines the clickable line under the mouse (using last frame's positions) and shows a tooltip. */
@@ -252,8 +238,8 @@ class PlayerCountOverlay extends Overlay
 		{
 			return null;
 		}
-		double localX = (x - b.x) / lastScale;
-		double localY = (y - b.y) / lastScale;
+		double localX = x - b.x;
+		double localY = y - b.y;
 		for (OverlayLayout.Item item : lastItems)
 		{
 			if (item.target != null && item.hitBox.contains(localX, localY))

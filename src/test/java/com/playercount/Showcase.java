@@ -110,7 +110,7 @@ public class Showcase
 		}
 		ImageIO.write(stacked(hsizes, 2), "png", new File(out, "overlay-compact-horizontal.png"));
 
-		// Sizes at 1:1 (exactly as drawn in game) and an integer 3x zoom: normal, compact, mini
+		// Sizes at 1:1 (exactly as drawn in game) and an integer 3x zoom: Full, Medium, Small
 		List<OverlayLayout.Item> miniItems = new ArrayList<>();
 		miniItems.add(OverlayLayout.Item.line("W302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
 		miniItems.add(OverlayLayout.Item.line("OSRS").add("115.2k", Color.WHITE));

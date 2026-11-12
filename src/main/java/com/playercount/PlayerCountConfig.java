@@ -19,15 +19,8 @@ public interface PlayerCountConfig extends Config
 	// RuneLite saves defaults on first load, so a new default needs a new key name.
 	String REFRESH_KEY = "updateInterval";
 	String SIDEBAR_KEY = "showSidebar";
-	// Renamed from overlayScale: an early build could save a wrong size there.
-	String SCALE_KEY = "overlaySize";
+	String SIZE_KEY = "overlaySizeOption";
 	String FAVORITES_KEY = "favoriteWorlds";
-	int MIN_SCALE = 60;
-	/** Below this the overlay switches to the compact layout rather than shrinking (shrunk pixel fonts blur). */
-	int COMPACT_BELOW = 90;
-	/** Below this it goes mini: short labels on one line, no title. */
-	int MINI_BELOW = 75;
-	int MAX_SCALE = 300;
 
 	@ConfigSection(name = "Look & size", description = "Frame style, size and when the overlay hides", position = -1)
 	String lookSection = "look";
@@ -69,12 +62,10 @@ public interface PlayerCountConfig extends Config
 		return 90;
 	}
 
-	@ConfigItem(keyName = SCALE_KEY, name = "Size", description = "Overlay size. Text is never shrunk (that blurs it): 60-74% is mini (short labels, one line), 75-89% compact (the game's small font), 90-110% normal, above that scales up. You can also hold Alt and drag the overlay's corner.", section = lookSection, position = 2)
-	@Range(min = MIN_SCALE, max = MAX_SCALE)
-	@Units(Units.PERCENT)
-	default int overlayScale()
+	@ConfigItem(keyName = SIZE_KEY, name = "Size", description = "Full, Medium (the game's small font) or Small (short labels on one line). Each is drawn at native size so text stays sharp. Alt-dragging the overlay's corner also switches size.", section = lookSection, position = 2)
+	default OverlaySize overlaySize()
 	{
-		return 100;
+		return OverlaySize.FULL;
 	}
 
 	@ConfigItem(keyName = "layout", name = "Layout", description = "Vertical list, or a horizontal strip", section = lookSection, position = 3)
@@ -346,6 +337,26 @@ public interface PlayerCountConfig extends Config
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum OverlaySize
+	{
+		FULL("Full"),
+		MEDIUM("Medium"),
+		SMALL("Small");
+
+		private final String label;
+
+		OverlaySize(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum Layout
