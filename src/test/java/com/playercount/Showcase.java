@@ -72,7 +72,6 @@ public class Showcase
 
 		List<OverlayLayout.Item> full = basicItems();
 		full.add(4, OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
-		full.add(OverlayLayout.Item.line("Wintertodt").add("W307 (812)", Color.WHITE));
 		full.add(OverlayLayout.Item.line("Today peak").add("126.4k at 20:14", Color.WHITE));
 		full.add(OverlayLayout.Item.line("Today low").add("88.1k at 07:52", Color.WHITE));
 		full.add(OverlayLayout.Item.graph(series, graphEnd, Duration.ofHours(1)));

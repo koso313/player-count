@@ -142,12 +142,6 @@ public interface PlayerCountConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "activityWorlds", name = "Activity worlds", description = "Comma-separated activity names (e.g. Wintertodt, Tempoross). Shows the busiest matching world for each.", section = linesSection, position = 10)
-	default String activityWorlds()
-	{
-		return "";
-	}
-
 	@ConfigItem(keyName = "showRecords", name = "Daily records", description = "Today's peak and low OSRS total and when they happened (day resets 00:00 UTC)", section = linesSection, position = 11)
 	default boolean showRecords()
 	{

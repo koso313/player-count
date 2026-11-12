@@ -95,7 +95,6 @@ public class PlayerCountPlugin extends Plugin
 	private static final int MAX_HOP_ATTEMPTS = 5;
 	/** Ticks to ignore nearby-player changes after a login, hop or map load while players stream in. */
 	private static final int NEARBY_SETTLE_TICKS = 3;
-	private static final int MAX_ACTIVITY_TERMS = 6;
 	private static final String RECORDS_KEY = "dailyRecords";
 	/** Seconds after the last hit (either way) that you still count as in combat. */
 	private static final long COMBAT_LINGER_S = 8;
@@ -662,27 +661,6 @@ public class PlayerCountPlugin extends Plugin
 	Map<WorldRegion, WorldMap.RegionStat> regionStats()
 	{
 		return regionStats;
-	}
-
-	/** Busiest world per configured activity term, in the order typed (null value = none found). */
-	Map<String, World> activityWorlds()
-	{
-		WorldResult latest = latest();
-		String raw = config.activityWorlds();
-		if (latest == null || raw == null || raw.trim().isEmpty())
-		{
-			return Collections.emptyMap();
-		}
-		Map<String, World> out = new LinkedHashMap<>();
-		for (String term : raw.split(","))
-		{
-			String t = term.trim();
-			if (!t.isEmpty() && out.size() < MAX_ACTIVITY_TERMS)
-			{
-				out.put(t, WorldStats.busiestActivity(latest.getWorlds(), t));
-			}
-		}
-		return out;
 	}
 
 	/** Change in the total since the baseline, or null if there's no baseline yet. */
@@ -1310,6 +1288,8 @@ public class PlayerCountPlugin extends Plugin
 		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.STARRED_KEY, join(starred));
 		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(typed));
 		recomputeFavorites();
+		// RuneLite only writes settings to disk every few minutes or on exit; save stars straight away.
+		executor.execute(configManager::sendConfig);
 		clientThread.invokeLater(() ->
 		{
 			updateSuggestion();

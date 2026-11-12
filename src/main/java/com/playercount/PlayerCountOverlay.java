@@ -416,12 +416,6 @@ class PlayerCountOverlay extends Overlay
 			}
 		}
 
-		for (Map.Entry<String, World> e : plugin.activityWorlds().entrySet())
-		{
-			World w = e.getValue();
-			items.add(flagRisk(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE).target(w), w, !mini));
-		}
-
 		if (config.showRecords())
 		{
 			DailyRecords r = plugin.getRecords();

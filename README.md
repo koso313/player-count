@@ -21,7 +21,6 @@ history.
   players are. Hover a region on the map for its player count, share and number of worlds.
 
   ![Region display options](docs/regions-vertical.png)
-- **Activity worlds**: type activities like `Wintertodt, Tempoross` and see the busiest world for each.
 - **Daily records**: today's peak and low OSRS total, and when they happened.
 - **Population graph** of the OSRS total or your current world over the last 1–6 hours. History is
   saved between sessions.
