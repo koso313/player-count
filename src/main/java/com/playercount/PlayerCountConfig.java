@@ -25,29 +25,26 @@ public interface PlayerCountConfig extends Config
 	/** Worlds starred in the sidebar, kept apart from the text box so an open settings panel can't overwrite them. */
 	String STARRED_KEY = "starredWorlds";
 
-	@ConfigSection(name = "Look & size", description = "Frame style, size and when the overlay hides", position = -1)
+	@ConfigSection(name = "Overlay", description = "How the overlay looks and when it hides", position = 0)
 	String lookSection = "look";
 
-	@ConfigSection(name = "Overlay lines", description = "What the overlay shows", position = 0)
+	@ConfigSection(name = "Overlay lines", description = "What the overlay shows", position = 1)
 	String linesSection = "lines";
 
-	@ConfigSection(name = "Change & colours", description = "+/- figures and colour coding", position = 1)
-	String colorsSection = "colors";
-
-	@ConfigSection(name = "Population graph", description = "Graph of player counts over time", position = 2)
-	String graphSection = "graph";
-
-	@ConfigSection(name = "World finder", description = "Find a quiet (or busy) world to hop to", position = 3)
+	@ConfigSection(name = "World finder", description = "Find a world to hop to and the hotkeys for it", position = 2)
 	String finderSection = "finder";
 
-	@ConfigSection(name = "Alerts", description = "Notifications when counts change", position = 4)
+	@ConfigSection(name = "Finder filters", description = "Narrow down which worlds the finder suggests", position = 3, closedByDefault = true)
+	String filtersSection = "filters";
+
+	@ConfigSection(name = "World alerts", description = "Notifications when your world gets busy or quiet", position = 4)
 	String alertsSection = "alerts";
 
-	@ConfigSection(name = "Sidebar & chat", description = "World list panel and chat command", position = 5)
-	String extrasSection = "extras";
+	@ConfigSection(name = "Player arrives", description = "Alert and highlight when players show up near you", position = 5)
+	String arrivalSection = "arrival";
 
-	@ConfigSection(name = "Data", description = "How often player counts are refreshed", position = 6)
-	String dataSection = "data";
+	@ConfigSection(name = "Sidebar & data", description = "Sidebar panel, chat command, refresh and ping", position = 6, closedByDefault = true)
+	String extrasSection = "extras";
 
 	// ---- Look & size ----
 
@@ -77,16 +74,10 @@ public interface PlayerCountConfig extends Config
 		return Layout.VERTICAL;
 	}
 
-	@ConfigItem(keyName = "hideMode", name = "Auto-hide", description = "Hide the overlay in combat, or until you hover over it", section = lookSection, position = 3)
-	default HideMode hideMode()
+	@ConfigItem(keyName = "autoHide", name = "Auto-hide", description = "Hide the overlay in combat, in instances (boss rooms, raids, minigames), either, or until you hover over it", section = lookSection, position = 4)
+	default AutoHide autoHide()
 	{
-		return HideMode.NEVER;
-	}
-
-	@ConfigItem(keyName = "hideInInstances", name = "Hide in instances", description = "Hide the overlay in instanced areas such as boss rooms, raids and minigames", section = lookSection, position = 4)
-	default boolean hideInInstances()
-	{
-		return false;
+		return AutoHide.NEVER;
 	}
 
 	// ---- Overlay lines ----
@@ -109,55 +100,61 @@ public interface PlayerCountConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "showMembersSplit", name = "Members / F2P split", description = "Total split into members and free-to-play worlds", section = linesSection, position = 3)
+	@ConfigItem(keyName = "changeStyle", name = "Change (+/-)", description = "Show how your world and the total changed over the last minute: off, plain, or green for gains and red for losses", section = linesSection, position = 3)
+	default ChangeStyle changeStyle()
+	{
+		return ChangeStyle.COLOURED;
+	}
+
+	@ConfigItem(keyName = "showMembersSplit", name = "Members / F2P split", description = "Total split into members and free-to-play worlds", section = linesSection, position = 4)
 	default boolean showMembersSplit()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "regionDisplay", name = "Regions", description = "Players per region: one line each, the top regions on one line, a share bar, or a world map of glowing players (hover a region for its count)", section = linesSection, position = 4)
+	@ConfigItem(keyName = "regionDisplay", name = "Regions", description = "Players per region: one line each, the top regions on one line, a share bar, or a world map of glowing players (hover a region for its count)", section = linesSection, position = 5)
 	default RegionDisplay regionDisplay()
 	{
 		return RegionDisplay.OFF;
 	}
 
-	@ConfigItem(keyName = "showNearby", name = "Nearby players", description = "Other players within render distance", section = linesSection, position = 5)
+	@ConfigItem(keyName = "showNearby", name = "Nearby players", description = "Other players within render distance", section = linesSection, position = 7)
 	default boolean showNearby()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "showPing", name = "Ping", description = "Your ping to the current world", section = linesSection, position = 5)
+	@ConfigItem(keyName = "showPing", name = "Ping", description = "Your ping to the current world", section = linesSection, position = 6)
 	default boolean showPing()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "showSocial", name = "Friends & clan here", description = "How many of your friends and clan members are on your world", section = linesSection, position = 6)
+	@ConfigItem(keyName = "showSocial", name = "Friends & clan here", description = "How many of your friends and clan members are on your world", section = linesSection, position = 8)
 	default boolean showSocial()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "showSuggestion", name = "Suggested world", description = "The world finder's pick", section = linesSection, position = 7)
+	@ConfigItem(keyName = "showSuggestion", name = "Suggested world", description = "The world finder's pick", section = linesSection, position = 9)
 	default boolean showSuggestion()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "activityWorlds", name = "Activity worlds", description = "Comma-separated activity names (e.g. Wintertodt, Tempoross). Shows the busiest matching world for each.", section = linesSection, position = 8)
+	@ConfigItem(keyName = "activityWorlds", name = "Activity worlds", description = "Comma-separated activity names (e.g. Wintertodt, Tempoross). Shows the busiest matching world for each.", section = linesSection, position = 10)
 	default String activityWorlds()
 	{
 		return "";
 	}
 
-	@ConfigItem(keyName = "showRecords", name = "Daily records", description = "Today's peak and low OSRS total and when they happened (day resets 00:00 UTC)", section = linesSection, position = 9)
+	@ConfigItem(keyName = "showRecords", name = "Daily records", description = "Today's peak and low OSRS total and when they happened (day resets 00:00 UTC)", section = linesSection, position = 11)
 	default boolean showRecords()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "showUpdated", name = "Last updated", description = "Show how long ago counts were refreshed", section = linesSection, position = 10)
+	@ConfigItem(keyName = "showUpdated", name = "Last updated", description = "Show how long ago counts were refreshed", section = linesSection, position = 14)
 	default boolean showUpdated()
 	{
 		return false;
@@ -165,19 +162,7 @@ public interface PlayerCountConfig extends Config
 
 	// ---- Change & colours ----
 
-	@ConfigItem(keyName = "showChange", name = "Show change", description = "Show +/- over the last minute", section = colorsSection, position = 0)
-	default boolean showChange()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "colorChanges", name = "Colour changes", description = "Green for gains, red for losses", section = colorsSection, position = 1)
-	default boolean colorChanges()
-	{
-		return true;
-	}
-
-	@ConfigItem(keyName = "busyThreshold", name = "Busy world above", description = "Current world count turns red above this (also used by the busy alert)", section = colorsSection, position = 2)
+	@ConfigItem(keyName = "busyThreshold", name = "Busy above", description = "Your world counts as busy above this many players: the busy alert fires and its count turns red in the overlay", section = alertsSection, position = 1)
 	@Range(min = 1, max = 2000)
 	default int busyThreshold()
 	{
@@ -186,19 +171,13 @@ public interface PlayerCountConfig extends Config
 
 	// ---- Graph ----
 
-	@ConfigItem(keyName = "showGraph", name = "Show graph", description = "Draw a population graph in the overlay (history starts when the plugin starts)", section = graphSection, position = 0)
-	default boolean showGraph()
+	@ConfigItem(keyName = "graphMode", name = "Graph", description = "Graph the OSRS total or your current world over time (history is kept between sessions)", section = linesSection, position = 12)
+	default GraphMode graphMode()
 	{
-		return false;
+		return GraphMode.OFF;
 	}
 
-	@ConfigItem(keyName = "graphSeries", name = "Graph", description = "What to graph", section = graphSection, position = 1)
-	default GraphSeries graphSeries()
-	{
-		return GraphSeries.TOTAL;
-	}
-
-	@ConfigItem(keyName = "graphHours", name = "Time span (hours)", description = "How far back the graph goes, in hours", section = graphSection, position = 2)
+	@ConfigItem(keyName = "graphHours", name = "Graph time span (hours)", description = "How far back the graph goes, in hours", section = linesSection, position = 13)
 	@Range(min = 1, max = 6)
 	default int graphHours()
 	{
@@ -238,31 +217,31 @@ public interface PlayerCountConfig extends Config
 		return ThemedOrder.BUSIEST;
 	}
 
-	@ConfigItem(keyName = "warnRisky", name = "Warn on risky worlds", description = "Themed worlds can include risky worlds. PvP and Deadman worlds (attackable almost anywhere) pulse red; other PvP-themed worlds (High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena) and separate-account worlds (Leagues, beta, speedrun, fresh start) are orange with an orange underline. Chat warns as you hop.", section = finderSection, position = 5)
+	@ConfigItem(keyName = "warnRisky", name = "Warn on risky worlds", description = "Themed worlds can include risky worlds. PvP and Deadman worlds (attackable almost anywhere) pulse red; other PvP-themed worlds (High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena) and separate-account worlds (Leagues, beta, speedrun, fresh start) are orange with an orange underline. Chat warns as you hop.", section = finderSection, position = 4)
 	default boolean warnRisky()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = finderSection, position = 6)
+	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = filtersSection, position = 0)
 	default Membership membership()
 	{
 		return Membership.SAME_AS_CURRENT;
 	}
 
-	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = finderSection, position = 7)
+	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = filtersSection, position = 1)
 	default RegionFilter region()
 	{
 		return RegionFilter.ANY;
 	}
 
-	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = finderSection, position = 8)
+	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = filtersSection, position = 3)
 	default boolean allowSkillTotal()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = finderSection, position = 9)
+	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = filtersSection, position = 2)
 	@Range(max = 1000)
 	@Units(Units.MILLISECONDS)
 	default int maxPing()
@@ -270,13 +249,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = finderSection, position = 10)
+	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = filtersSection, position = 5)
 	default boolean preferUsual()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = finderSection, position = 11)
+	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = filtersSection, position = 4)
 	@Range(max = 120)
 	@Units(Units.MINUTES)
 	default int skipRecentMinutes()
@@ -284,13 +263,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 12)
+	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 5)
 	default Keybind hopKey()
 	{
 		return Keybind.NOT_SET;
 	}
 
-	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 13)
+	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 6)
 	default Keybind nextWorldKey()
 	{
 		return Keybind.NOT_SET;
@@ -298,69 +277,69 @@ public interface PlayerCountConfig extends Config
 
 	// ---- Alerts ----
 
-	@ConfigItem(keyName = "busyAlert", name = "World gets busy", description = "Notify when your world goes above the 'Busy world above' count", section = alertsSection, position = 0)
+	@ConfigItem(keyName = "busyAlert", name = "World gets busy", description = "Notify when your world goes above the Busy above count", section = alertsSection, position = 0)
 	default Notification busyAlert()
 	{
 		return Notification.OFF;
 	}
 
-	@ConfigItem(keyName = "quietAlert", name = "World gets quiet", description = "Notify when your world drops below the count below", section = alertsSection, position = 1)
+	@ConfigItem(keyName = "quietAlert", name = "World gets quiet", description = "Notify when your world drops below the count below", section = alertsSection, position = 2)
 	default Notification quietAlert()
 	{
 		return Notification.OFF;
 	}
 
-	@ConfigItem(keyName = "quietThreshold", name = "Quiet world below", description = "Count used by the quiet alert", section = alertsSection, position = 2)
+	@ConfigItem(keyName = "quietThreshold", name = "Quiet below", description = "Your world counts as quiet below this many players (for the quiet alert)", section = alertsSection, position = 3)
 	@Range(min = 1, max = 2000)
 	default int quietThreshold()
 	{
 		return 100;
 	}
 
-	@ConfigItem(keyName = "nearbyAlert", name = "Player arrives", description = "Alert when a player shows up nearby. Click the cog to choose a screen flash (and its colour), a sound, a tray popup or a chat message.", section = alertsSection, position = 3)
+	@ConfigItem(keyName = "nearbyAlert", name = "Alert", description = "Alert when a player shows up nearby. Click the cog to choose a screen flash (and its colour), a sound, a tray popup or a chat message.", section = arrivalSection, position = 0)
 	default Notification nearbyAlert()
 	{
 		return Notification.OFF;
 	}
 
-	@ConfigItem(keyName = "arrivalMode", name = "Alert for", description = "Only the first player to arrive while you were alone, or every new player", section = alertsSection, position = 4)
+	@ConfigItem(keyName = "arrivalMode", name = "Alert for", description = "Only the first player to arrive while you were alone, or every new player", section = arrivalSection, position = 1)
 	default ArrivalMode arrivalMode()
 	{
 		return ArrivalMode.WHEN_ALONE;
 	}
 
-	@ConfigItem(keyName = "arrivalRange", name = "Within", description = "Only count players within this many tiles (0 = anywhere on screen)", section = alertsSection, position = 5)
+	@ConfigItem(keyName = "arrivalRange", name = "Within", description = "Only count players within this many tiles (0 = anywhere on screen)", section = arrivalSection, position = 2)
 	@Range(max = 32)
 	default int arrivalRange()
 	{
 		return 0;
 	}
 
-	@ConfigItem(keyName = "arrivalIgnoreFriends", name = "Ignore friends & clan", description = "Don't alert for friends, clan members or your friends chat", section = alertsSection, position = 6)
+	@ConfigItem(keyName = "arrivalIgnoreFriends", name = "Ignore friends & clan", description = "Don't alert for friends, clan members or your friends chat", section = arrivalSection, position = 3)
 	default boolean arrivalIgnoreFriends()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "arrivalAttackableOnly", name = "Only if they can attack you", description = "Only alert for players in combat range of you: in the Wilderness the level gap must be within the Wilderness level, PvP worlds add 15, and on Deadman anyone counts", section = alertsSection, position = 7)
+	@ConfigItem(keyName = "arrivalAttackableOnly", name = "Only if they can attack you", description = "Only alert for players in combat range of you: in the Wilderness the level gap must be within the Wilderness level, PvP worlds add 15, and on Deadman anyone counts", section = arrivalSection, position = 4)
 	default boolean arrivalAttackableOnly()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "arrivalHighlight", name = "Highlight arrivals", description = "Outline players who set off the alert and show their name and combat level", section = alertsSection, position = 8)
+	@ConfigItem(keyName = "arrivalHighlight", name = "Highlight arrivals", description = "Outline players who set off the alert and show their name and combat level", section = arrivalSection, position = 5)
 	default boolean arrivalHighlight()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "arrivalColor", name = "Highlight colour", description = "Colour of the arrival outline and label", section = alertsSection, position = 9)
+	@ConfigItem(keyName = "arrivalColor", name = "Highlight colour", description = "Colour of the arrival outline and label", section = arrivalSection, position = 6)
 	default Color arrivalColor()
 	{
 		return new Color(0xFF, 0x30, 0x30);
 	}
 
-	@ConfigItem(keyName = "arrivalSeconds", name = "Highlight for", description = "How long arrivals stay highlighted", section = alertsSection, position = 10)
+	@ConfigItem(keyName = "arrivalSeconds", name = "Highlight for", description = "How long arrivals stay highlighted", section = arrivalSection, position = 7)
 	@Range(min = 1, max = 60)
 	@Units(Units.SECONDS)
 	default int arrivalSeconds()
@@ -370,7 +349,7 @@ public interface PlayerCountConfig extends Config
 
 	// ---- Sidebar & chat ----
 
-	@ConfigItem(keyName = SIDEBAR_KEY, name = "World list sidebar", description = "Sidebar panel listing every world with live counts; double-click a world to hop", section = extrasSection, position = 0)
+	@ConfigItem(keyName = SIDEBAR_KEY, name = "World list sidebar", description = "Sidebar panel listing every world with live counts, ping and a Hop button", section = extrasSection, position = 0)
 	default boolean showSidebar()
 	{
 		return true;
@@ -390,13 +369,13 @@ public interface PlayerCountConfig extends Config
 
 	// ---- Data ----
 
-	@ConfigItem(keyName = "pingEnabled", name = "Measure ping", description = "Ping worlds (a quick connection to each world server) for the ping line, sidebar and finder", section = dataSection, position = 1)
+	@ConfigItem(keyName = "pingEnabled", name = "Measure ping", description = "Ping worlds (a quick connection to each world server) for the ping line, sidebar and finder", section = extrasSection, position = 4)
 	default boolean pingEnabled()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "pingInterval", name = "Ping every", description = "How often to re-ping your current world (other worlds: favourites every 20s, all worlds every 2 minutes)", section = dataSection, position = 2)
+	@ConfigItem(keyName = "pingInterval", name = "Ping every", description = "How often to re-ping your current world (other worlds: favourites every 20s, all worlds every 2 minutes)", section = extrasSection, position = 5)
 	@Range(min = 1, max = 60)
 	@Units(Units.SECONDS)
 	default int pingInterval()
@@ -404,7 +383,7 @@ public interface PlayerCountConfig extends Config
 		return 3;
 	}
 
-	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to download Jagex's live world list", section = dataSection, position = 0)
+	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to download Jagex's live world list", section = extrasSection, position = 3)
 	@Range(min = MIN_REFRESH, max = 600)
 	@Units(Units.SECONDS)
 	default int refreshInterval()
@@ -514,15 +493,37 @@ public interface PlayerCountConfig extends Config
 		}
 	}
 
-	enum HideMode
+	enum AutoHide
 	{
 		NEVER("Never"),
 		IN_COMBAT("In combat"),
+		IN_INSTANCES("In instances"),
+		COMBAT_OR_INSTANCES("Combat or instances"),
 		UNTIL_HOVER("Until hovered");
 
 		private final String label;
 
-		HideMode(String label)
+		AutoHide(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
+	}
+
+	enum ChangeStyle
+	{
+		OFF("Off"),
+		PLAIN("Plain"),
+		COLOURED("Coloured");
+
+		private final String label;
+
+		ChangeStyle(String label)
 		{
 			this.label = label;
 		}
@@ -554,14 +555,15 @@ public interface PlayerCountConfig extends Config
 		}
 	}
 
-	enum GraphSeries
+	enum GraphMode
 	{
+		OFF("Off"),
 		TOTAL("OSRS total"),
 		CURRENT_WORLD("Current world");
 
 		private final String label;
 
-		GraphSeries(String label)
+		GraphMode(String label)
 		{
 			this.label = label;
 		}

@@ -106,7 +106,7 @@ class PlayerCountOverlay extends Overlay
 			lastItems = new ArrayList<>();
 			return null;
 		}
-		if (config.hideMode() == PlayerCountConfig.HideMode.UNTIL_HOVER && !hovered() && lastSize != null)
+		if (config.autoHide() == PlayerCountConfig.AutoHide.UNTIL_HOVER && !hovered() && lastSize != null)
 		{
 			// Keep the space (so hovering it brings the overlay back) with just a faint outline.
 			graphics.setColor(HIDDEN_HINT);
@@ -439,10 +439,10 @@ class PlayerCountOverlay extends Overlay
 			items.add(OverlayLayout.Item.line("Updated").add(secs < 60 ? secs + "s ago" : (secs / 60) + "m ago", MUTED));
 		}
 
-		if (config.showGraph())
+		if (config.graphMode() != PlayerCountConfig.GraphMode.OFF)
 		{
 			Duration window = Duration.ofHours(Math.max(1, config.graphHours()));
-			int world = config.graphSeries() == PlayerCountConfig.GraphSeries.CURRENT_WORLD ? plugin.currentWorld() : -1;
+			int world = config.graphMode() == PlayerCountConfig.GraphMode.CURRENT_WORLD ? plugin.currentWorld() : -1;
 			Instant now = Instant.now();
 			items.add(OverlayLayout.Item.graph(plugin.getHistory().series(now, window, world), now, window));
 		}
@@ -508,9 +508,9 @@ class PlayerCountOverlay extends Overlay
 	/** Appends the +/- in green/red (or the value's colour if colouring is off). */
 	private OverlayLayout.Item change(OverlayLayout.Item item, Color valueColor, Integer change)
 	{
-		if (config.showChange() && change != null && change != 0)
+		if (config.changeStyle() != PlayerCountConfig.ChangeStyle.OFF && change != null && change != 0)
 		{
-			Color color = !config.colorChanges() ? valueColor : change > 0 ? UP : DOWN;
+			Color color = config.changeStyle() == PlayerCountConfig.ChangeStyle.PLAIN ? valueColor : change > 0 ? UP : DOWN;
 			item.add(String.format(" (%+,d)", change), color);
 		}
 		return item;

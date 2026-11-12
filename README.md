@@ -103,6 +103,19 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
   arrived 6 tiles away", and they're **outlined** in your chosen colour for a few seconds.
 - Type `::players` in chat for a quick summary.
 
+## Settings
+
+Settings are grouped so you only open what you need:
+
+- **Overlay**: frame style, background opacity, size, layout (vertical or horizontal), auto-hide.
+- **Overlay lines**: what the overlay shows, including change (+/-), regions and the graph.
+- **World finder**: what to find, theme, favourite worlds, order, risky-world warnings and hotkeys.
+- **Finder filters** (collapsed): membership, region, max ping, skill total worlds, skip recent worlds,
+  prefer usually quiet.
+- **World alerts**: notifications when your world gets busy or quiet, with the thresholds.
+- **Player arrives**: the arrival alert and its range, filters and highlight.
+- **Sidebar & data** (collapsed): sidebar, world map, `::players`, refresh rate and ping.
+
 ## Data and network use
 
 - **Player counts** come from Jagex's live world list (`www.runescape.com/g=oldscape/slr.ws`), the

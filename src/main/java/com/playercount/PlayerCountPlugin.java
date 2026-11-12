@@ -1332,12 +1332,15 @@ public class PlayerCountPlugin extends Plugin
 	/** True when the overlay should be hidden for reasons other than hover. */
 	boolean hiddenBySituation()
 	{
-		if (config.hideInInstances() && client.getGameState() == GameState.LOGGED_IN
+		PlayerCountConfig.AutoHide hide = config.autoHide();
+		boolean instances = hide == PlayerCountConfig.AutoHide.IN_INSTANCES || hide == PlayerCountConfig.AutoHide.COMBAT_OR_INSTANCES;
+		boolean combat = hide == PlayerCountConfig.AutoHide.IN_COMBAT || hide == PlayerCountConfig.AutoHide.COMBAT_OR_INSTANCES;
+		if (instances && client.getGameState() == GameState.LOGGED_IN
 			&& client.getTopLevelWorldView() != null && client.getTopLevelWorldView().isInstance())
 		{
 			return true;
 		}
-		return config.hideMode() == PlayerCountConfig.HideMode.IN_COMBAT && inCombat();
+		return combat && inCombat();
 	}
 
 	/** Last measured ping to a world in ms, or -1. */
