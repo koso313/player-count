@@ -57,6 +57,8 @@ import net.runelite.client.config.Notification;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ClientShutdown;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.PluginChanged;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.WorldsFetch;
 import net.runelite.client.game.WorldService;
 import net.runelite.client.input.KeyManager;
@@ -149,6 +151,9 @@ public class PlayerCountPlugin extends Plugin
 
 	@Inject
 	private MouseManager mouseManager;
+
+	@Inject
+	private EventBus eventBus;
 
 	/** Left-clicks on the overlay's world lines hop there. */
 	private final MouseAdapter overlayClicks = new MouseAdapter()
@@ -737,6 +742,13 @@ public class PlayerCountPlugin extends Plugin
 		return client.getWorld();
 	}
 
+	/** The world you're on, from the latest list, or null. */
+	World currentWorldInfo()
+	{
+		WorldResult latest = latest();
+		return latest == null ? null : latest.findWorld(client.getWorld());
+	}
+
 	private static int playersOn(WorldResult result, int id)
 	{
 		if (result == null)
@@ -1263,7 +1275,9 @@ public class PlayerCountPlugin extends Plugin
 		}
 		favorites = Collections.unmodifiableSet(next);
 		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY,
-			next.stream().map(String::valueOf).collect(Collectors.joining(",")));
+			next.stream().map(String::valueOf).collect(Collectors.joining(", ")));
+		// RuneLite's settings panel only redraws on a plugin change, so nudge it to show the new list.
+		eventBus.post(new PluginChanged(this, true));
 		clientThread.invokeLater(() ->
 		{
 			updateSuggestion();

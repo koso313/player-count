@@ -205,7 +205,7 @@ final class OverlayLayout
 					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered || item.caution).star(item.star).glow(item.warn, item.pulse);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered || item.caution).underlineColor(item.caution ? CAUTION : null).star(item.star).glow(item.warn, item.pulse);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
@@ -352,7 +352,7 @@ final class OverlayLayout
 					}
 					if ((item.hovered || item.caution) && vw > 0)
 					{
-						g.setColor(item.parts.get(0).getColor());
+						g.setColor(item.caution ? CAUTION : item.parts.get(0).getColor());
 						g.drawLine(vx, base + 2, vx + vw - 1, base + 2);
 					}
 				}
@@ -379,7 +379,7 @@ final class OverlayLayout
 					if ((item.hovered || item.caution) && vw > 0)
 					{
 						int uy = ty + small.getHeight() + value.getAscent() + 2;
-						g.setColor(item.parts.get(0).getColor());
+						g.setColor(item.caution ? CAUTION : item.parts.get(0).getColor());
 						g.drawLine(vx, uy, vx + vw - 1, uy);
 					}
 					for (RichLineComponent.Part p : item.parts)

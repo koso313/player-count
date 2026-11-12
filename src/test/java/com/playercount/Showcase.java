@@ -136,7 +136,7 @@ public class Showcase
 
 		// Risky-world warning (Themed worlds)
 		List<OverlayLayout.Item> risky = new ArrayList<>();
-		risky.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).star(true));
+		risky.add(OverlayLayout.Item.line("World 474").add("491", Color.WHITE).add(" High risk", OverlayLayout.CAUTION).caution(true));
 		risky.add(OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
 		risky.add(OverlayLayout.Item.line("PvP worlds").add("W392 (50) US", OverlayLayout.RISK).add(" 41ms", PlayerCountOverlay.UP).add(" PvP", OverlayLayout.RISK).warn(true));
 		risky.add(OverlayLayout.Item.line("Wilderness PK").add("W369 (699) US", OverlayLayout.CAUTION).add(" 28ms", PlayerCountOverlay.UP).add(" Wildy PK", OverlayLayout.CAUTION).caution(true));

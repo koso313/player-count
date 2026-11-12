@@ -320,8 +320,9 @@ class PlayerCountOverlay extends Overlay
 			int players = plugin.currentWorldPlayers();
 			Color color = players > config.busyThreshold() ? DOWN : Color.WHITE;
 			String count = players < 0 ? "?" : String.format("%,d", players);
-			items.add(change(OverlayLayout.Item.line((mini ? "W" : "World ") + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange())
-				.star(plugin.isFavourite(plugin.currentWorld())));
+			OverlayLayout.Item here = change(OverlayLayout.Item.line((mini ? "W" : "World ") + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange())
+				.star(plugin.isFavourite(plugin.currentWorld()));
+			items.add(flagRisk(here, plugin.currentWorldInfo(), !mini));
 		}
 
 		WorldStats.Totals totals = plugin.getTotals();
@@ -418,7 +419,7 @@ class PlayerCountOverlay extends Overlay
 		for (Map.Entry<String, World> e : plugin.activityWorlds().entrySet())
 		{
 			World w = e.getValue();
-			items.add(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE).target(w));
+			items.add(flagRisk(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE).target(w), w, !mini));
 		}
 
 		if (config.showRecords())
@@ -482,6 +483,26 @@ class PlayerCountOverlay extends Overlay
 			default:
 				return "Quiet";
 		}
+	}
+
+	/**
+	 * Marks a line red (pulsing) for worlds where you can be attacked almost anywhere, or orange (underlined)
+	 * for other PvP-themed and separate-account worlds, and adds a short tag like "High risk".
+	 */
+	private OverlayLayout.Item flagRisk(OverlayLayout.Item item, World w, boolean tag)
+	{
+		String risk = w == null || !config.warnRisky() ? null : WorldStats.risk(w);
+		if (risk == null)
+		{
+			return item;
+		}
+		boolean deadly = WorldStats.deadly(w);
+		Color c = deadly ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+		if (tag)
+		{
+			item.add(" " + risk, c);
+		}
+		return item.warn(deadly).pulse(deadly).caution(!deadly);
 	}
 
 	/** Appends the +/- in green/red (or the value's colour if colouring is off). */

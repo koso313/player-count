@@ -433,6 +433,7 @@ class WorldListPanel extends PluginPanel
 		if (current == null)
 		{
 			worldTitle.setText(s.getCurrentWorld() > 0 ? "World " + s.getCurrentWorld() : "Not logged in");
+			worldTitle.setForeground(Color.WHITE);
 			worldTitle.setIcon(null);
 			worldPlayers.setText(" ");
 			worldInfo.setText(" ");
@@ -441,6 +442,12 @@ class WorldListPanel extends PluginPanel
 		else
 		{
 			worldTitle.setText("World " + current.getId());
+			String hereRisk = s.isWarnRisky() ? WorldStats.risk(current) : null;
+			worldTitle.setForeground(hereRisk == null ? Color.WHITE : WorldStats.deadly(current) ? OverlayLayout.RISK : OverlayLayout.CAUTION);
+			if (hereRisk != null)
+			{
+				worldTitle.setText("World " + current.getId() + "  " + hereRisk);
+			}
 			boolean fav = s.getFavorites().contains(current.getId());
 			worldTitle.setIcon(fav ? STAR_ICON : null);
 			worldTitle.setToolTipText(fav ? "One of your favourite worlds" : null);

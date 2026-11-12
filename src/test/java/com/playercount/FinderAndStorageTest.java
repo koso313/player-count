@@ -113,7 +113,8 @@ public class FinderAndStorageTest
 		World pvp = WorldStats.pick(worlds, base().theme(WorldTheme.PVP).mode(WorldStats.Mode.THEMED_BUSIEST).build());
 		assertEquals(325, pvp.getId());
 		assertEquals("PvP", WorldStats.risk(pvp));
-		assertNull(WorldStats.risk(worlds.get(5))); // LMS is a safe minigame
+		assertEquals("LMS", WorldStats.risk(worlds.get(5))); // PvP-themed: orange, not deadly
+		assertTrue(!WorldStats.deadly(worlds.get(5)));
 		World wildy = themed(369, 699, "Wilderness PK - Members");
 		assertEquals("Wildy PK", WorldStats.risk(wildy));
 		assertTrue(!WorldStats.deadly(wildy)); // only the Wilderness is dangerous
@@ -172,7 +173,8 @@ public class FinderAndStorageTest
 		assertEquals("PvP high risk", WorldStats.risk(w));
 		assertTrue(WorldStats.deadly(w));
 		World arena = themed(348, 300, "PvP Arena (Legacy Duels)");
-		assertNull(WorldStats.risk(arena)); // safe, so not coloured
+		assertEquals("PvP Arena", WorldStats.risk(arena)); // PvP-themed: orange
+		assertTrue(!WorldStats.deadly(arena));
 	}
 
 	@Test

@@ -31,6 +31,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 	private final List<Part> right = new ArrayList<>();
 	private Rectangle tracked;
 	private boolean underline;
+	private Color underlineColor;
 	private boolean star;
 	private boolean glow;
 	private boolean pulse;
@@ -65,6 +66,13 @@ class RichLineComponent implements LayoutableRenderableEntity
 	RichLineComponent underline(boolean on)
 	{
 		this.underline = on;
+		return this;
+	}
+
+	/** Underline in this colour instead of the value's (e.g. orange for a risky world). */
+	RichLineComponent underlineColor(Color c)
+	{
+		this.underlineColor = c;
 		return this;
 	}
 
@@ -132,7 +140,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 		int rx = x + preferredSize.width - rightWidth(fm);
 		if (underline && !right.isEmpty())
 		{
-			g2(graphics, right.get(0).getColor(), rx, baseline + 2, rightWidth(fm));
+			g2(graphics, underlineColor != null ? underlineColor : right.get(0).getColor(), rx, baseline + 2, rightWidth(fm));
 		}
 		for (Part p : right)
 		{

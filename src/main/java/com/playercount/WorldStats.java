@@ -362,6 +362,15 @@ final class WorldStats
 		{
 			return "Wildy PK";
 		}
+		// PvP minigames: nothing to lose, but PvP all the same, so flagged orange like the Wilderness worlds
+		if (t.contains(WorldType.LAST_MAN_STANDING) || activity.startsWith("lms") || activity.contains("last man standing"))
+		{
+			return "LMS";
+		}
+		if (t.contains(WorldType.PVP_ARENA) || activity.contains("pvp arena"))
+		{
+			return "PvP Arena";
+		}
 		return null;
 	}
 
