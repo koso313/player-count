@@ -325,10 +325,16 @@ final class WorldStats
 	static String risk(World w)
 	{
 		java.util.EnumSet<WorldType> t = w.getTypes();
+		// Attackable almost anywhere first
 		if (t.contains(WorldType.DEADMAN))
 		{
 			return "Deadman";
 		}
+		if (t.contains(WorldType.PVP))
+		{
+			return t.contains(WorldType.HIGH_RISK) ? "PvP high risk" : "PvP";
+		}
+		// Dangerous in the Wilderness
 		if (t.contains(WorldType.HIGH_RISK))
 		{
 			return "High risk";
@@ -336,10 +342,6 @@ final class WorldStats
 		if (t.contains(WorldType.BOUNTY))
 		{
 			return "Bounty Hunter";
-		}
-		if (t.contains(WorldType.PVP))
-		{
-			return "PvP";
 		}
 		if (t.contains(WorldType.SEASONAL))
 		{

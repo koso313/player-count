@@ -1107,6 +1107,11 @@ public class PlayerCountPlugin extends Plugin
 	{
 		if (config.finderMode() == PlayerCountConfig.FinderMode.THEMED)
 		{
+			int need = config.theme().requiredTotal();
+			if (need > 0 && client.getTotalLevel() < need)
+			{
+				return String.format("%s worlds need a total level of %,d (yours is %,d).", config.theme(), need, client.getTotalLevel());
+			}
 			return "No open " + config.theme() + " worlds right now match your finder settings.";
 		}
 		if (config.finderMode() == PlayerCountConfig.FinderMode.FAVOURITES && favorites.isEmpty())

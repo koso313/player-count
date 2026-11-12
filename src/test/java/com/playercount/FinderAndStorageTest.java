@@ -125,6 +125,57 @@ public class FinderAndStorageTest
 	}
 
 	@Test
+	public void everyLiveActivityHasATheme() throws java.io.IOException
+	{
+		List<World> live;
+		try (java.io.InputStream in = getClass().getResourceAsStream("slr-sample.bin"))
+		{
+			live = SlrParser.parse(in.readAllBytes());
+		}
+		java.util.Set<String> uncovered = new java.util.TreeSet<>();
+		for (World w : live)
+		{
+			String a = w.getActivity();
+			if (a == null || a.trim().isEmpty() || "-".equals(a.trim()))
+			{
+				continue;
+			}
+			if (Arrays.stream(WorldTheme.values()).noneMatch(t -> t.matches(w)))
+			{
+				uncovered.add(a);
+			}
+		}
+		assertTrue("Activities no theme covers: " + uncovered, uncovered.isEmpty());
+	}
+
+	@Test
+	public void skillTotalThemesMatchExactly()
+	{
+		World w500 = themed(301, 10, "500 skill total", WorldType.SKILL_TOTAL);
+		World w1500 = themed(302, 10, "1500 skill total", WorldType.SKILL_TOTAL);
+		assertTrue(WorldTheme.SKILL_TOTAL_500.matches(w500));
+		assertTrue(!WorldTheme.SKILL_TOTAL_500.matches(w1500)); // 500 is inside "1500"
+		assertTrue(WorldTheme.SKILL_TOTAL_1500.matches(w1500));
+		assertTrue(WorldTheme.SKILL_TOTAL.matches(w500) && WorldTheme.SKILL_TOTAL.matches(w1500));
+		assertEquals(2200, WorldTheme.SKILL_TOTAL_2200.requiredTotal());
+		// The finder still respects your total level
+		World w2200 = themed(303, 10, "2200 skill total", WorldType.SKILL_TOTAL);
+		WorldStats.Criteria.CriteriaBuilder c = base().theme(WorldTheme.SKILL_TOTAL_2200).mode(WorldStats.Mode.THEMED_BUSIEST).allowSkillTotal(true);
+		assertNull(WorldStats.pick(Arrays.asList(w2200), c.totalLevel(2100).build()));
+		assertEquals(303, WorldStats.pick(Arrays.asList(w2200), c.totalLevel(2250).build()).getId());
+	}
+
+	@Test
+	public void pvpHighRiskIsDeadlyAndNamedSo()
+	{
+		World w = themed(579, 62, "PvP World - High Risk", WorldType.PVP, WorldType.HIGH_RISK);
+		assertEquals("PvP high risk", WorldStats.risk(w));
+		assertTrue(WorldStats.deadly(w));
+		World arena = themed(348, 300, "PvP Arena (Legacy Duels)");
+		assertNull(WorldStats.risk(arena)); // safe, so not coloured
+	}
+
+	@Test
 	public void everyThemeMatchesAtLeastOneLiveWorld() throws java.io.IOException
 	{
 		// Guards against typos in theme terms: the sample is a real world list from 2026-11-11.

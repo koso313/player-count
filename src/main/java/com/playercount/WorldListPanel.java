@@ -765,7 +765,11 @@ class WorldListPanel extends PluginPanel
 			// Line 1: world number and region, players and change on the right
 			g.setFont(FontManager.getRunescapeBoldFont());
 			FontMetrics bold = g.getFontMetrics();
-			g.setColor(current ? ColorScheme.BRAND_ORANGE : WorldStats.isSpecial(world) ? SPECIAL : Color.WHITE);
+			String risk = WorldStats.risk(world);
+			Color nameColor = current ? ColorScheme.BRAND_ORANGE
+				: risk == null ? Color.WHITE
+				: WorldStats.deadly(world) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+			g.setColor(nameColor);
 			String name = "W" + world.getId();
 			g.drawString(name, STAR_AREA, 15);
 			g.setFont(FontManager.getRunescapeSmallFont());

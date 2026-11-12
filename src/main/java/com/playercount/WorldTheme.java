@@ -53,7 +53,15 @@ public enum WorldTheme
 	YAMA("Yama", "yama"),
 	ZALCANO("Zalcano", "zalcano"),
 	ZEAH_RUNECRAFTING("Zeah Runecrafting", "zeah runecrafting"),
-	SKILL_TOTAL("Skill total worlds", "skill total"),
+	SKILL_TOTAL("Skill total (any)", "skill total"),
+	SKILL_TOTAL_500("Skill total 500", 500),
+	SKILL_TOTAL_750("Skill total 750", 750),
+	SKILL_TOTAL_1250("Skill total 1250", 1250),
+	SKILL_TOTAL_1500("Skill total 1500", 1500),
+	SKILL_TOTAL_1750("Skill total 1750", 1750),
+	SKILL_TOTAL_2000("Skill total 2000", 2000),
+	SKILL_TOTAL_2200("Skill total 2200", 2200),
+	SKILL_TOTAL_2350("Skill total 2350", 2350),
 	LAST_MAN_STANDING("Last Man Standing", "lms", "last man standing"),
 	PVP_ARENA("PvP Arena", "pvp arena"),
 	HARDCORE("Hardcore worlds", "hardcore"),
@@ -70,6 +78,8 @@ public enum WorldTheme
 	private final String label;
 	private final WorldType type;
 	private final String[] terms;
+	/** For a specific skill-total theme, the total it needs (0 otherwise). */
+	private final int total;
 
 	WorldTheme(String label, String... terms)
 	{
@@ -81,6 +91,22 @@ public enum WorldTheme
 		this.label = label;
 		this.type = type;
 		this.terms = terms;
+		this.total = 0;
+	}
+
+	/** A specific skill-total level, matched exactly (so 500 doesn't also match 1500). */
+	WorldTheme(String label, int total)
+	{
+		this.label = label;
+		this.type = null;
+		this.terms = new String[0];
+		this.total = total;
+	}
+
+	/** Total level a specific skill-total theme needs, or 0. */
+	int requiredTotal()
+	{
+		return total;
 	}
 
 	/** Short form for the Small overlay size. */
@@ -92,6 +118,10 @@ public enum WorldTheme
 
 	boolean matches(World w)
 	{
+		if (total > 0)
+		{
+			return w.getActivity() != null && w.getActivity().trim().toLowerCase(Locale.ROOT).startsWith(total + " skill total");
+		}
 		if (type != null && w.getTypes().contains(type))
 		{
 			return true;
