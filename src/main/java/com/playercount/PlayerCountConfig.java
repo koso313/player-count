@@ -1,5 +1,6 @@
 package com.playercount;
 
+import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -308,10 +309,55 @@ public interface PlayerCountConfig extends Config
 		return 100;
 	}
 
-	@ConfigItem(keyName = "nearbyAlert", name = "Player arrives", description = "Notify when someone shows up nearby while you were alone", section = alertsSection, position = 3)
+	@ConfigItem(keyName = "nearbyAlert", name = "Player arrives", description = "Alert when a player shows up nearby. Click the cog to choose a screen flash (and its colour), a sound, a tray popup or a chat message.", section = alertsSection, position = 3)
 	default Notification nearbyAlert()
 	{
 		return Notification.OFF;
+	}
+
+	@ConfigItem(keyName = "arrivalMode", name = "Alert for", description = "Only the first player to arrive while you were alone, or every new player", section = alertsSection, position = 4)
+	default ArrivalMode arrivalMode()
+	{
+		return ArrivalMode.WHEN_ALONE;
+	}
+
+	@ConfigItem(keyName = "arrivalRange", name = "Within", description = "Only count players within this many tiles (0 = anywhere on screen)", section = alertsSection, position = 5)
+	@Range(max = 32)
+	default int arrivalRange()
+	{
+		return 0;
+	}
+
+	@ConfigItem(keyName = "arrivalIgnoreFriends", name = "Ignore friends & clan", description = "Don't alert for friends, clan members or your friends chat", section = alertsSection, position = 6)
+	default boolean arrivalIgnoreFriends()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "arrivalAttackableOnly", name = "Only if they can attack you", description = "Only alert for players in combat range of you: in the Wilderness the level gap must be within the Wilderness level, PvP worlds add 15, and on Deadman anyone counts", section = alertsSection, position = 7)
+	default boolean arrivalAttackableOnly()
+	{
+		return false;
+	}
+
+	@ConfigItem(keyName = "arrivalHighlight", name = "Highlight arrivals", description = "Outline players who set off the alert and show their name and combat level", section = alertsSection, position = 8)
+	default boolean arrivalHighlight()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "arrivalColor", name = "Highlight colour", description = "Colour of the arrival outline and label", section = alertsSection, position = 9)
+	default Color arrivalColor()
+	{
+		return new Color(0xFF, 0x30, 0x30);
+	}
+
+	@ConfigItem(keyName = "arrivalSeconds", name = "Highlight for", description = "How long arrivals stay highlighted", section = alertsSection, position = 10)
+	@Range(min = 1, max = 60)
+	@Units(Units.SECONDS)
+	default int arrivalSeconds()
+	{
+		return 6;
 	}
 
 	// ---- Sidebar & chat ----
@@ -356,6 +402,25 @@ public interface PlayerCountConfig extends Config
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum ArrivalMode
+	{
+		WHEN_ALONE("When you were alone"),
+		EVERY_PLAYER("Every new player");
+
+		private final String label;
+
+		ArrivalMode(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum RegionDisplay

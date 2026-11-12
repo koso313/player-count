@@ -93,8 +93,13 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 
 ## Alerts and chat
 
-- Notifications when your world gets busy or quiet, or when a player arrives nearby while you were
-  alone. Each uses RuneLite's standard notification settings.
+- Notifications when your world gets busy or quiet, or when a player arrives nearby. Each uses
+  RuneLite's notification settings (click the cog for a screen flash in any colour, a sound, a tray
+  popup or a chat message).
+- **Player arrives** options for PKers and skillers: alert for the first arrival or every new player,
+  only within X tiles, ignore friends and clan, or only players who **can attack you** (Wilderness
+  level and PvP-world combat ranges, Deadman). The alert names them, e.g. "Zezima (lvl-112, skulled)
+  arrived 6 tiles away", and they're **outlined** in your chosen colour for a few seconds.
 - Type `::players` in chat for a quick summary.
 
 ## Data and network use

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -123,6 +124,9 @@ public class PlayerCountPlugin extends Plugin
 	private PlayerCountOverlay overlay;
 
 	@Inject
+	private ArrivalOverlay arrivalOverlay;
+
+	@Inject
 	private PlayerCountConfig config;
 
 	@Inject
@@ -193,6 +197,11 @@ public class PlayerCountPlugin extends Plugin
 	private boolean wasBusy;
 	private boolean wasQuiet;
 	private int nearbySettle = NEARBY_SETTLE_TICKS;
+	/** Players that counted for the arrival alert last tick (by name). */
+	private Set<String> lastQualifying = new HashSet<>();
+	/** Players to highlight, until when. Client thread only. */
+	@Getter
+	private final Map<Player, Instant> arrivals = new HashMap<>();
 
 	private net.runelite.api.World hopTarget;
 	private int hopAttempts;
@@ -249,6 +258,7 @@ public class PlayerCountPlugin extends Plugin
 		store.load(HISTORY_FILE, in -> history6h.read(in, now));
 		store.load(USAGE_FILE, usage::read);
 		overlayManager.add(overlay);
+		overlayManager.add(arrivalOverlay);
 		keyManager.registerKeyListener(hopHotkey);
 		keyManager.registerKeyListener(nextHotkey);
 		mouseManager.registerMouseListener(overlayClicks);
@@ -327,6 +337,7 @@ public class PlayerCountPlugin extends Plugin
 	protected void shutDown()
 	{
 		overlayManager.remove(overlay);
+		overlayManager.remove(arrivalOverlay);
 		keyManager.unregisterKeyListener(hopHotkey);
 		keyManager.unregisterKeyListener(nextHotkey);
 		mouseManager.unregisterMouseListener(overlayClicks);
@@ -351,6 +362,8 @@ public class PlayerCountPlugin extends Plugin
 			regionTotals = Collections.emptyMap();
 			visited.clear();
 			cycled.clear();
+			arrivals.clear();
+			lastQualifying.clear();
 			lastCombat = null;
 			pingWorlds = Collections.emptyList();
 			suggestion = null;
@@ -536,16 +549,8 @@ public class PlayerCountPlugin extends Plugin
 			visited.put(client.getWorld(), Instant.now());
 		}
 
-		int n = countNearby();
-		if (nearbySettle > 0)
-		{
-			nearbySettle--;
-		}
-		else if (nearby == 0 && n > 0)
-		{
-			notify(config.nearbyAlert(), n == 1 ? "A player arrived nearby." : n + " players arrived nearby.");
-		}
-		nearby = n;
+		nearby = countNearby();
+		checkArrivals();
 
 		friendsHere = config.showSocial() ? countFriendsHere() : -1;
 		clanHere = config.showSocial() ? countClanHere() : -1;
@@ -577,6 +582,8 @@ public class PlayerCountPlugin extends Plugin
 		{
 			hopTarget = null;
 			nearby = -1;
+			arrivals.clear();
+			lastQualifying.clear();
 		}
 		if (s == GameState.LOADING || s == GameState.HOPPING || s == GameState.LOGGED_IN)
 		{
@@ -812,6 +819,114 @@ public class PlayerCountPlugin extends Plugin
 	}
 
 	// ---- Alerts ----
+
+	/** Players that count for the arrival alert right now: in range, not friends (if set), attackable (if set). */
+	private List<Player> qualifyingPlayers()
+	{
+		List<Player> out = new ArrayList<>();
+		Player me = client.getLocalPlayer();
+		WorldView view = client.getTopLevelWorldView();
+		if (me == null || view == null || client.getGameState() != GameState.LOGGED_IN)
+		{
+			return out;
+		}
+		boolean pvpWorld = client.getWorldType().contains(net.runelite.api.WorldType.PVP);
+		boolean deadman = client.getWorldType().contains(net.runelite.api.WorldType.DEADMAN);
+		for (Player p : view.players())
+		{
+			if (p == null || p == me || p.getName() == null)
+			{
+				continue;
+			}
+			if (config.arrivalRange() > 0 && me.getWorldLocation().distanceTo(p.getWorldLocation()) > config.arrivalRange())
+			{
+				continue;
+			}
+			if (config.arrivalIgnoreFriends() && (p.isFriend() || p.isClanMember() || p.isFriendsChatMember()))
+			{
+				continue;
+			}
+			if (config.arrivalAttackableOnly() && !Attackable.canAttack(me.getCombatLevel(), me.getWorldLocation(),
+				p.getCombatLevel(), p.getWorldLocation(), pvpWorld, deadman))
+			{
+				continue;
+			}
+			out.add(p);
+		}
+		return out;
+	}
+
+	/** Fires the Player arrives alert (and highlight) for newly arrived qualifying players. */
+	private void checkArrivals()
+	{
+		if (!config.nearbyAlert().isEnabled())
+		{
+			lastQualifying.clear();
+			arrivals.clear();
+			return;
+		}
+		List<Player> now = qualifyingPlayers();
+		Set<String> names = new HashSet<>();
+		for (Player p : now)
+		{
+			names.add(p.getName());
+		}
+		if (nearbySettle > 0)
+		{
+			// Players stream in after a login, hop or loading screen; don't treat them as arrivals.
+			nearbySettle--;
+			lastQualifying = names;
+			return;
+		}
+		List<Player> arrived = new ArrayList<>();
+		for (Player p : now)
+		{
+			if (!lastQualifying.contains(p.getName()))
+			{
+				arrived.add(p);
+			}
+		}
+		boolean fire = !arrived.isEmpty()
+			&& (config.arrivalMode() == PlayerCountConfig.ArrivalMode.EVERY_PLAYER || lastQualifying.isEmpty());
+		lastQualifying = names;
+		if (!fire)
+		{
+			return;
+		}
+		Instant until = Instant.now().plusSeconds(config.arrivalSeconds());
+		for (Player p : arrived)
+		{
+			arrivals.put(p, until);
+		}
+		notify(config.nearbyAlert(), arrivalMessage(arrived));
+	}
+
+	private String arrivalMessage(List<Player> arrived)
+	{
+		Player me = client.getLocalPlayer();
+		if (arrived.size() == 1)
+		{
+			Player p = arrived.get(0);
+			int tiles = me == null ? -1 : me.getWorldLocation().distanceTo(p.getWorldLocation());
+			return describe(p) + " arrived" + (tiles >= 0 ? " " + tiles + (tiles == 1 ? " tile" : " tiles") + " away." : ".");
+		}
+		StringBuilder sb = new StringBuilder(arrived.size() + " players arrived: ");
+		for (int i = 0; i < Math.min(3, arrived.size()); i++)
+		{
+			sb.append(i == 0 ? "" : ", ").append(describe(arrived.get(i)));
+		}
+		if (arrived.size() > 3)
+		{
+			sb.append(" and ").append(arrived.size() - 3).append(" more");
+		}
+		return sb.append('.').toString();
+	}
+
+	private static String describe(Player p)
+	{
+		String skull = p.getSkullIcon() >= 0 ? ", skulled" : "";
+		return p.getName() + " (lvl-" + p.getCombatLevel() + skull + ")";
+	}
 
 	private void checkWorldAlerts()
 	{
