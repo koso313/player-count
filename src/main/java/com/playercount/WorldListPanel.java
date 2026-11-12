@@ -94,6 +94,8 @@ class WorldListPanel extends PluginPanel
 		String finderLabel;
 		boolean finderOff;
 		boolean warnRisky;
+		Map<WorldRegion, WorldMap.RegionStat> regionStats;
+		boolean showMap;
 		Instant updated;
 	}
 
@@ -161,6 +163,7 @@ class WorldListPanel extends PluginPanel
 	private int hoverIndex = -1;
 
 	private State state;
+	private final WorldMapView mapView = new WorldMapView();
 
 	WorldListPanel(Actions actions)
 	{
@@ -173,11 +176,19 @@ class WorldListPanel extends PluginPanel
 		JPanel top = new JPanel();
 		top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
 		top.setOpaque(false);
+		mapView.setAlignmentX(LEFT_ALIGNMENT);
+		top.add(mapView);
+		top.add(Box.createVerticalStrut(6));
 		top.add(headerCard());
 		top.add(Box.createVerticalStrut(6));
 		top.add(actionRow());
 		top.add(Box.createVerticalStrut(8));
 		top.add(filters());
+		// BoxLayout lines children up by alignment; all left, so nothing gets offset or squeezed
+		for (Component c : top.getComponents())
+		{
+			((JComponent) c).setAlignmentX(LEFT_ALIGNMENT);
+		}
 		add(top, BorderLayout.NORTH);
 
 		list.setCellRenderer(new RowRenderer());
@@ -261,6 +272,7 @@ class WorldListPanel extends PluginPanel
 	{
 		JPanel card = new JPanel(new GridLayout(0, 1, 0, 1));
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		card.setAlignmentX(LEFT_ALIGNMENT);
 		card.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createMatteBorder(0, 3, 0, 0, ColorScheme.BRAND_ORANGE),
 			BorderFactory.createEmptyBorder(6, 8, 6, 8)));
@@ -416,6 +428,11 @@ class WorldListPanel extends PluginPanel
 	private void refreshHeader()
 	{
 		State s = state;
+		mapView.setVisible(s.isShowMap());
+		if (s.isShowMap() && s.getRegionStats() != null)
+		{
+			mapView.setData(s.getRegionStats(), Math.max(0, s.getTotal()));
+		}
 		World current = s.getCurrentWorld() > 0 ? find(s.getCurrentWorld()) : null;
 		if (current == null)
 		{

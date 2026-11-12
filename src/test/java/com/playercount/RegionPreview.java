@@ -57,7 +57,10 @@ public class RegionPreview
 		List<List<OverlayLayout.Item>> options = new ArrayList<>();
 		options.add(withBase(OverlayLayout.Item.line("Regions").add(topLine, Color.WHITE)));
 		options.add(withBase(OverlayLayout.Item.custom("regions-bar", () -> new RegionGraphics.Bar(totals), 130)));
-		options.add(withBase(OverlayLayout.Item.custom("regions-map", () -> new RegionGraphics.Map2D(totals, 70, true), 150)));
+		Map<WorldRegion, WorldMap.RegionStat> stats = WorldMap.stats(worlds);
+		int total = WorldStats.totals(worlds).getTotal();
+		WorldMap map = new WorldMap();
+		options.add(withBase(OverlayLayout.Item.custom("regions-map", () -> new WorldMapComponent(map, stats, WorldRegion.UNITED_KINGDOM, total, 0), 200)));
 
 		List<BufferedImage> vertical = new ArrayList<>();
 		List<BufferedImage> horizontal = new ArrayList<>();
@@ -67,7 +70,9 @@ public class RegionPreview
 		}
 		horizontal.add(render(painter, options.get(0), PlayerCountConfig.Layout.HORIZONTAL));
 		horizontal.add(render(painter, options.get(1), PlayerCountConfig.Layout.HORIZONTAL));
-		List<OverlayLayout.Item> mapStrip = withBase(OverlayLayout.Item.custom("regions-map", () -> new RegionGraphics.Map2D(totals, 30, false), 70));
+		OverlayLayout.Item mapCell = OverlayLayout.Item.custom("regions-map", () -> new WorldMapComponent(map, stats, null, total, 44), 108);
+		mapCell.componentHeight = 46;
+		List<OverlayLayout.Item> mapStrip = withBase(mapCell);
 		horizontal.add(render(painter, mapStrip, PlayerCountConfig.Layout.HORIZONTAL));
 
 		ImageIO.write(sheet(vertical, true, 3), "png", new File(out, "regions-vertical.png"));

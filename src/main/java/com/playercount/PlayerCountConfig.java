@@ -112,10 +112,10 @@ public interface PlayerCountConfig extends Config
 		return false;
 	}
 
-	@ConfigItem(keyName = "showRegions", name = "Region breakdown", description = "Total players per region (US, UK, DE, AU...)", section = linesSection, position = 4)
-	default boolean showRegions()
+	@ConfigItem(keyName = "regionDisplay", name = "Regions", description = "Players per region: one line each, the top regions on one line, a share bar, or a world map of glowing players (hover a region for its count)", section = linesSection, position = 4)
+	default RegionDisplay regionDisplay()
 	{
-		return false;
+		return RegionDisplay.OFF;
 	}
 
 	@ConfigItem(keyName = "showNearby", name = "Nearby players", description = "Other players within render distance", section = linesSection, position = 5)
@@ -327,7 +327,13 @@ public interface PlayerCountConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "chatCommand", name = "::players command", description = "Type ::players in chat to print the counts", section = extrasSection, position = 1)
+	@ConfigItem(keyName = "sidebarMap", name = "Sidebar world map", description = "Show the glowing player map at the top of the sidebar (hover a region for its count)", section = extrasSection, position = 1)
+	default boolean sidebarMap()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "chatCommand", name = "::players command", description = "Type ::players in chat to print the counts", section = extrasSection, position = 2)
 	default boolean chatCommand()
 	{
 		return true;
@@ -355,6 +361,28 @@ public interface PlayerCountConfig extends Config
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum RegionDisplay
+	{
+		OFF("Off"),
+		LIST("One line each"),
+		TOP("Top regions"),
+		BAR("Share bar"),
+		MAP("World map");
+
+		private final String label;
+
+		RegionDisplay(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum ThemedOrder

@@ -176,6 +176,7 @@ public class PlayerCountPlugin extends Plugin
 	@Getter
 	private DailyRecords records = new DailyRecords();
 	private Map<WorldRegion, Integer> regionTotals = Collections.emptyMap();
+	private Map<WorldRegion, WorldMap.RegionStat> regionStats = Collections.emptyMap();
 	private final Map<Integer, Instant> visited = new HashMap<>();
 
 	@Getter
@@ -514,6 +515,7 @@ public class PlayerCountPlugin extends Plugin
 		usage.add(now, worlds);
 		pingWorlds = worlds;
 		regionTotals = WorldStats.regionTotals(worlds);
+		regionStats = WorldMap.stats(worlds);
 		if (records.update(totals.getTotal(), now))
 		{
 			configManager.setConfiguration(PlayerCountConfig.GROUP, RECORDS_KEY, records.serialize());
@@ -642,6 +644,11 @@ public class PlayerCountPlugin extends Plugin
 	Map<WorldRegion, Integer> regionTotals()
 	{
 		return regionTotals;
+	}
+
+	Map<WorldRegion, WorldMap.RegionStat> regionStats()
+	{
+		return regionStats;
 	}
 
 	/** Busiest world per configured activity term, in the order typed (null value = none found). */
@@ -1210,6 +1217,8 @@ public class PlayerCountPlugin extends Plugin
 			.finderLabel(config.finderMode() == PlayerCountConfig.FinderMode.THEMED ? config.theme().toString() : config.finderMode().toString())
 			.finderOff(config.finderMode() == PlayerCountConfig.FinderMode.OFF)
 			.warnRisky(config.warnRisky())
+			.regionStats(regionStats)
+			.showMap(config.sidebarMap())
 			.updated(getLastUpdate())
 			.build());
 	}

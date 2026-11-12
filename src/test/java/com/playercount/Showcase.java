@@ -160,6 +160,8 @@ public class Showcase
 			.suggestion(suggestion)
 			.finderLabel("Quietest")
 			.finderOff(false)
+			.regionStats(WorldMap.stats(worlds))
+			.showMap(true)
 			.updated(Instant.now().minusSeconds(12))
 			.build();
 		ImageIO.write(sidebar(state), "png", new File(out, "sidebar.png"));
@@ -325,7 +327,7 @@ public class Showcase
 			JFrame f = new JFrame();
 			f.add(p);
 			f.pack();
-			f.setSize(PluginPanel.PANEL_WIDTH + 16, 720);
+			f.setSize(PluginPanel.PANEL_WIDTH + 16, 860);
 			panel.set(p);
 			frame.set(f);
 			p.update(state);

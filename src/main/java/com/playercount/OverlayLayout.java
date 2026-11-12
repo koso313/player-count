@@ -61,8 +61,10 @@ final class OverlayLayout
 		boolean caution;
 		/** A custom graphic (e.g. region map) instead of text; made fresh each frame. */
 		java.util.function.Supplier<LayoutableRenderableEntity> component;
-		/** Width of the custom graphic's cell in the horizontal strip. */
+		/** Width of the custom graphic's cell in the horizontal strip (and its minimum width in the vertical list). */
 		int componentWidth;
+		/** Height the custom graphic wants in the horizontal strip (0 = the text height). */
+		int componentHeight;
 		/** Where the line was drawn last, in the overlay's unscaled coordinates (filled in while rendering). */
 		final Rectangle hitBox = new Rectangle();
 
@@ -193,6 +195,7 @@ final class OverlayLayout
 			if (item.component != null)
 			{
 				panel.getChildren().add(item.component.get());
+				width = Math.max(width, item.componentWidth);
 				continue;
 			}
 			if (item.isGraph())
@@ -288,7 +291,14 @@ final class OverlayLayout
 		{
 			FontMetrics small = g.getFontMetrics(FontManager.getRunescapeSmallFont());
 			FontMetrics value = g.getFontMetrics();
-			int h = oneLine ? value.getHeight() : small.getHeight() + value.getHeight();
+			int textH = oneLine ? value.getHeight() : small.getHeight() + value.getHeight();
+			int h = textH;
+			for (Item it : items)
+			{
+				h = Math.max(h, it.componentHeight);
+			}
+			// Text sits vertically centred when a taller graphic sets the strip height
+			int textY = (h - textH) / 2;
 			int x = preferredLocation.x;
 			int y = preferredLocation.y;
 
@@ -325,7 +335,7 @@ final class OverlayLayout
 				else if (oneLine)
 				{
 					int lx = x + cellPad;
-					int base = y + value.getAscent();
+					int base = y + textY + value.getAscent();
 					text(g, item.label, labelColor, lx, base);
 					int vx = lx + value.stringWidth(item.label) + (item.label.isEmpty() ? 0 : 4);
 					if (item.star)
@@ -350,12 +360,13 @@ final class OverlayLayout
 				{
 					java.awt.Font valueFont = g.getFont();
 					g.setFont(FontManager.getRunescapeSmallFont());
+					int ty = y + textY;
 					int lw = small.stringWidth(item.label) + (item.star ? STAR_W : 0);
 					int lx = x + (cw - lw) / 2;
-					text(g, item.label, labelColor, lx, y + small.getAscent());
+					text(g, item.label, labelColor, lx, ty + small.getAscent());
 					if (item.star)
 					{
-						star(g, lx + small.stringWidth(item.label) + 3, y + small.getAscent() / 2 + 1, 4);
+						star(g, lx + small.stringWidth(item.label) + 3, ty + small.getAscent() / 2 + 1, 4);
 					}
 					g.setFont(valueFont);
 					int vw = 0;
@@ -367,13 +378,13 @@ final class OverlayLayout
 					item.hitBox.setBounds(x, y, cw, h);
 					if ((item.hovered || item.caution) && vw > 0)
 					{
-						int uy = y + small.getHeight() + value.getAscent() + 2;
+						int uy = ty + small.getHeight() + value.getAscent() + 2;
 						g.setColor(item.parts.get(0).getColor());
 						g.drawLine(vx, uy, vx + vw - 1, uy);
 					}
 					for (RichLineComponent.Part p : item.parts)
 					{
-						text(g, p.getText(), p.getColor(), vx, y + small.getHeight() + value.getAscent());
+						text(g, p.getText(), p.getColor(), vx, ty + small.getHeight() + value.getAscent());
 						vx += value.stringWidth(p.getText());
 					}
 				}

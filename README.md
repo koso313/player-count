@@ -15,7 +15,12 @@ history.
 - Numbers update in place: the overlay keeps a steady width instead of shifting as digits change.
 - **Ping** to your world, **players nearby**, and how many **friends and clan members** are on your
   world.
-- **Members / F2P split** and a **per-region breakdown** (US, UK, DE, AU and more).
+- **Members / F2P split**.
+- **Regions** (US, UK, DE, AU and more), shown as one line each, the top regions on one line, a
+  colour **share bar**, or a **world map** of glowing player dots clustered where each region's
+  players are. Hover a region on the map for its player count, share and number of worlds.
+
+  ![Region display options](docs/regions-vertical.png)
 - **Activity worlds**: type activities like `Wintertodt, Tempoross` and see the busiest world for each.
 - **Daily records**: today's peak and low OSRS total, and when they happened.
 - **Population graph** of the OSRS total or your current world over the last 1–6 hours. History is
@@ -74,6 +79,8 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 
 ![Sidebar world list](docs/sidebar.png)
 
+- A **world map** of glowing players at the top. Hover a region to see how many people are playing
+  there.
 - Your world at a glance: players, change, activity, region, how busy it usually is, and ping.
 - **Hop to suggested** and **Next world** buttons.
 - Every world with live players, change, ping and its usual count at this hour.
@@ -120,6 +127,10 @@ The README screenshots are rendered without the client:
 The steel frame uses the game's steel-border sprites (`310`–`315` and `2546`), which the plugin
 loads from the game at runtime. To render the screenshots, export those sprites from your game cache
 as PNGs named `<id>_0.png`.
+
+## Credits
+
+The world map outline is made with [Natural Earth](https://www.naturalearthdata.com/) (public domain).
 
 ## License
 

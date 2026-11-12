@@ -55,6 +55,10 @@ class PlayerCountOverlay extends Overlay
 	private final FramePainter painter = new FramePainter();
 	private final PanelComponent panelComponent = new PanelComponent();
 	private final OverlayLayout.WidthMemory widths = new OverlayLayout.WidthMemory();
+	private final WorldMap worldMap = new WorldMap();
+	/** The map drawn last frame (for hover) and the region under the mouse. */
+	private WorldMapComponent lastMap;
+	private WorldRegion hoverRegion;
 
 	/** Unscaled size last frame; PanelComponent itself sizes from the previous frame too. */
 	private Dimension lastNatural;
@@ -128,8 +132,13 @@ class PlayerCountOverlay extends Overlay
 			graphics.setFont(FontManager.getRunescapeSmallFont());
 		}
 
+		hoverRegion = mapHover();
 		List<OverlayLayout.Item> items = items();
 		markHover(items);
+		if (hoverRegion != null)
+		{
+			tooltipManager.add(new Tooltip(WorldMap.describe(hoverRegion, plugin.regionStats())));
+		}
 
 		panelComponent.getChildren().clear();
 		StringBuilder shown = new StringBuilder().append(style).append('|').append(layout).append('|').append(size).append('|').append(config.showTitle());
@@ -212,6 +221,18 @@ class PlayerCountOverlay extends Overlay
 		{
 			configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SIZE_KEY, sizes[i]);
 		}
+	}
+
+	/** Region under the mouse on last frame's world map, or null. */
+	private WorldRegion mapHover()
+	{
+		Point mouse = client.getMouseCanvasPosition();
+		Rectangle b = getBounds();
+		if (lastMap == null || mouse == null || b == null || !b.contains(mouse.getX(), mouse.getY()))
+		{
+			return null;
+		}
+		return lastMap.regionAt(mouse.getX() - b.x, mouse.getY() - b.y);
 	}
 
 	/** Underlines the clickable line under the mouse (using last frame's positions) and shows a tooltip. */
@@ -315,12 +336,37 @@ class PlayerCountOverlay extends Overlay
 			items.add(OverlayLayout.Item.line(mini ? "P2P" : "P2P / F2P").add(compact(totals.getMembers()) + " / " + compact(totals.getFree()), Color.WHITE));
 		}
 
-		if (config.showRegions())
+		lastMap = null;
+		switch (config.regionDisplay())
 		{
-			for (Map.Entry<WorldRegion, Integer> e : plugin.regionTotals().entrySet())
+			case LIST:
+				for (Map.Entry<WorldRegion, Integer> e : plugin.regionTotals().entrySet())
+				{
+					items.add(OverlayLayout.Item.line("  " + WorldStats.regionCode(e.getKey())).add(compact(e.getValue()), Color.WHITE));
+				}
+				break;
+			case TOP:
+				items.add(OverlayLayout.Item.line("Regions").add(topRegions(), Color.WHITE));
+				break;
+			case BAR:
 			{
-				items.add(OverlayLayout.Item.line("  " + WorldStats.regionCode(e.getKey())).add(compact(e.getValue()), Color.WHITE));
+				Map<WorldRegion, Integer> totalsByRegion = plugin.regionTotals();
+				items.add(OverlayLayout.Item.custom("regions-bar", () -> new RegionGraphics.Bar(totalsByRegion), mini ? 90 : 130));
+				break;
 			}
+			case MAP:
+			{
+				boolean strip = config.layout() == PlayerCountConfig.Layout.HORIZONTAL;
+				int total = totals == null ? 0 : totals.getTotal();
+				WorldMapComponent map = new WorldMapComponent(worldMap, plugin.regionStats(), hoverRegion, total, strip ? (mini ? 28 : 44) : 0);
+				lastMap = map;
+				OverlayLayout.Item item = OverlayLayout.Item.custom("regions-map", () -> map, strip ? (mini ? 70 : 108) : 200);
+				item.componentHeight = strip ? (mini ? 28 : 46) : 0;
+				items.add(item);
+				break;
+			}
+			default:
+				break;
 		}
 
 		if (config.showPing() && config.pingEnabled())
@@ -400,6 +446,27 @@ class PlayerCountOverlay extends Overlay
 			items.add(OverlayLayout.Item.graph(plugin.getHistory().series(now, window, world), now, window));
 		}
 		return items;
+	}
+
+	/** "US 74.0k  UK 18.3k  DE 13.1k  +5" */
+	private String topRegions()
+	{
+		StringBuilder sb = new StringBuilder();
+		int shown = 0;
+		Map<WorldRegion, Integer> all = plugin.regionTotals();
+		for (Map.Entry<WorldRegion, Integer> e : all.entrySet())
+		{
+			if (shown++ == 3)
+			{
+				break;
+			}
+			sb.append(sb.length() == 0 ? "" : "  ").append(WorldStats.regionCode(e.getKey())).append(' ').append(compact(e.getValue()));
+		}
+		if (all.size() > 3)
+		{
+			sb.append("  +").append(all.size() - 3);
+		}
+		return sb.toString();
 	}
 
 	private String shortFinder()
