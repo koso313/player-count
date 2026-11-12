@@ -37,7 +37,9 @@ class PingService
 
 	private final Map<Integer, Integer> pings = new ConcurrentHashMap<>();
 	private ScheduledExecutorService thread;
-	private long lastSweep;
+	private volatile long lastSweep;
+	private final java.util.Queue<World> sweepQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
+	private volatile int sweepDone;
 
 	/**
 	 * @param worlds  latest world list (may be empty before the first download)
@@ -84,37 +86,47 @@ class PingService
 				}
 			}
 		}), FAVOURITES_EVERY_S, FAVOURITES_EVERY_S, TimeUnit.SECONDS);
+		// All-worlds sweep: when one is due, queue the worlds (favourites first), then a separate task pings
+		// one queued world every SWEEP_SPACING_MS. Spacing comes from scheduling, never from sleeping.
 		lastSweep = 0;
+		sweepQueue.clear();
 		thread.scheduleWithFixedDelay(() -> safely(() ->
 		{
 			List<World> list = new ArrayList<>(worlds.get());
 			long now = System.currentTimeMillis();
 			// Wait for the world list, then sweep straight away and every SWEEP_EVERY_S after.
-			if (list.isEmpty() || (lastSweep != 0 && now - lastSweep < SWEEP_EVERY_S * 1000))
+			if (!sweepQueue.isEmpty() || list.isEmpty() || (lastSweep != 0 && now - lastSweep < SWEEP_EVERY_S * 1000))
 			{
 				return;
 			}
 			lastSweep = now;
+			sweepDone = 0;
 			Set<Integer> priority = first.get();
 			Collections.shuffle(list);
 			list.sort((a, b) -> Boolean.compare(!priority.contains(a.getId()), !priority.contains(b.getId())));
-			int done = 0;
 			for (World w : list)
 			{
-				if (Thread.currentThread().isInterrupted())
-				{
-					return;
-				}
 				if (w.getPlayers() >= 0)
 				{
-					measure(w);
-					done++;
-					sleep(SWEEP_SPACING_MS);
+					sweepQueue.add(w);
 				}
 			}
-			log.debug("Pinged {} worlds in {}s ({} reachable)", done, (System.currentTimeMillis() - now) / 1000,
-				pings.values().stream().filter(p -> p >= 0).count());
 		}), 1, SWEEP_CHECK_S, TimeUnit.SECONDS);
+		thread.scheduleWithFixedDelay(() -> safely(() ->
+		{
+			World w = sweepQueue.poll();
+			if (w == null)
+			{
+				return;
+			}
+			measure(w);
+			sweepDone++;
+			if (sweepQueue.isEmpty())
+			{
+				log.debug("Pinged {} worlds in {}s ({} reachable)", sweepDone, (System.currentTimeMillis() - lastSweep) / 1000,
+					pings.values().stream().filter(p -> p >= 0).count());
+			}
+		}), SWEEP_SPACING_MS, SWEEP_SPACING_MS, TimeUnit.MILLISECONDS);
 	}
 
 	synchronized void stop()
@@ -124,6 +136,7 @@ class PingService
 			thread.shutdownNow();
 			thread = null;
 		}
+		sweepQueue.clear();
 		pings.clear();
 	}
 
@@ -151,18 +164,6 @@ class PingService
 		catch (IOException e)
 		{
 			pings.put(w.getId(), -1);
-		}
-	}
-
-	private static void sleep(long ms)
-	{
-		try
-		{
-			Thread.sleep(ms);
-		}
-		catch (InterruptedException e)
-		{
-			Thread.currentThread().interrupt();
 		}
 	}
 
