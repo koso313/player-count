@@ -83,10 +83,13 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
   there.
 - Your world at a glance: players, change, activity, region, how busy it usually is, and ping.
 - **Hop to suggested** and **Next world** buttons.
-- Every world with live players, change, ping and its usual count at this hour.
+- Every world with its **region flag**, a **gold P2P / silver F2P** plaque, live players, change, ping
+  and its usual count at this hour.
 - **Search** by world number or activity. The **Filters** button opens membership, region, theme
   (including Favourites), sort and Hide PvP, and shows how many filters are on, e.g. "Filters (2)".
-- **Favourites**: click the star to favourite a world; favourites stay at the top.
+- **Favourites**: click a world's star, or type a world number in the Favourites row and press Enter.
+  The row lists your favourites; click one to hop there, or its x to remove it. Favourites stay at the
+  top of the list and save straight away.
 - **Hop** button on the row you hover over, or double-click a world (or press Enter). Right-click for
   more options.
 

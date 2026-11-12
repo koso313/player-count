@@ -74,6 +74,8 @@ class WorldListPanel extends PluginPanel
 
 		void toggleFavorite(int world);
 
+		void setFavorite(int world, boolean on);
+
 		void refresh();
 	}
 
@@ -164,6 +166,9 @@ class WorldListPanel extends PluginPanel
 		}
 	};
 	private final JButton filtersButton = button("Filters");
+	private final JPanel favChips = new JPanel(new WrapLayout(java.awt.FlowLayout.LEFT, 4, 3));
+	private final JTextField favAdd = new JTextField(4);
+	private String favShown = "";
 	private final JPanel filtersPanel = new JPanel(new GridLayout(0, 1, 0, 4));
 	private final JComboBox<String> membership = new JComboBox<>(new String[]{"All worlds", "Members", "Free-to-play"});
 	private final JComboBox<String> region = new JComboBox<>();
@@ -178,6 +183,8 @@ class WorldListPanel extends PluginPanel
 	private int hoverIndex = -1;
 
 	private State state;
+	/** Region flags from the game's world switcher, once loaded. */
+	private final Map<WorldRegion, java.awt.image.BufferedImage> flags = new java.util.EnumMap<>(WorldRegion.class);
 	private final WorldMapView mapView = new WorldMapView();
 
 	WorldListPanel(Actions actions)
@@ -197,6 +204,8 @@ class WorldListPanel extends PluginPanel
 		top.add(headerCard());
 		top.add(Box.createVerticalStrut(6));
 		top.add(actionRow());
+		top.add(Box.createVerticalStrut(6));
+		top.add(favouritesBox());
 		top.add(Box.createVerticalStrut(8));
 		top.add(filters());
 		// BoxLayout lines children up by alignment; all left, so nothing gets offset or squeezed
@@ -315,6 +324,220 @@ class WorldListPanel extends PluginPanel
 
 		worldTitle.setText("Not logged in");
 		return card;
+	}
+
+	/** Favourites as small tags (click to hop, x to remove) and a box to add one by number. */
+	private JComponent favouritesBox()
+	{
+		JPanel box = new JPanel(new BorderLayout(0, 4));
+		box.setOpaque(false);
+
+		JPanel head = new JPanel(new BorderLayout(6, 0));
+		head.setOpaque(false);
+		JLabel title = label(FontManager.getRunescapeSmallFont(), SUBTLE, "Favourites");
+		title.setIcon(STAR_ICON);
+		head.add(title, BorderLayout.WEST);
+
+		favAdd.setToolTipText("Type a world number and press Enter to add it");
+		favAdd.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		favAdd.setForeground(Color.WHITE);
+		favAdd.setCaretColor(Color.WHITE);
+		favAdd.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
+			BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+		JButton add = button("Add");
+		add.setMargin(new Insets(0, 4, 0, 4));
+		add.addActionListener(e -> addTypedFavourite());
+		favAdd.addActionListener(e -> addTypedFavourite());
+		JPanel adder = new JPanel(new BorderLayout(4, 0));
+		adder.setOpaque(false);
+		adder.add(favAdd, BorderLayout.CENTER);
+		adder.add(add, BorderLayout.EAST);
+		head.add(adder, BorderLayout.EAST);
+		box.add(head, BorderLayout.NORTH);
+
+		favChips.setOpaque(false);
+		box.add(favChips, BorderLayout.CENTER);
+		return box;
+	}
+
+	private void addTypedFavourite()
+	{
+		String text = favAdd.getText().trim();
+		int id;
+		try
+		{
+			id = Integer.parseInt(text.replaceAll("[^0-9]", ""));
+		}
+		catch (NumberFormatException e)
+		{
+			flagBadInput("Type a world number, e.g. 302");
+			return;
+		}
+		if (state == null || find(id) == null)
+		{
+			flagBadInput("There's no world " + id);
+			return;
+		}
+		favAdd.setText("");
+		favAdd.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
+			BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+		favAdd.setToolTipText("Type a world number and press Enter to add it");
+		actions.setFavorite(id, true);
+	}
+
+	private void flagBadInput(String why)
+	{
+		favAdd.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(OverlayLayout.RISK),
+			BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+		favAdd.setToolTipText(why);
+		ToolTipManagerHelper.show(favAdd);
+	}
+
+	/** Rebuilds the favourite tags when the set changes. */
+	private void refreshFavourites()
+	{
+		String key = state.getFavorites().toString();
+		if (key.equals(favShown))
+		{
+			return;
+		}
+		favShown = key;
+		favChips.removeAll();
+		if (state.getFavorites().isEmpty())
+		{
+			favChips.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "None yet: star a world below or add one"));
+		}
+		for (int id : state.getFavorites())
+		{
+			favChips.add(chip(id));
+		}
+		favChips.revalidate();
+		favChips.repaint();
+	}
+
+	private JComponent chip(int id)
+	{
+		JPanel chip = new JPanel(new BorderLayout(3, 0));
+		chip.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		chip.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(new Color(0x6B, 0x5A, 0x28)),
+			BorderFactory.createEmptyBorder(1, 4, 1, 3)));
+		JLabel name = label(FontManager.getRunescapeSmallFont(), OverlayLayout.GOLD, String.valueOf(id));
+		name.setToolTipText("Hop to world " + id);
+		name.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		name.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				World w = state == null ? null : find(id);
+				if (w != null)
+				{
+					actions.hop(w);
+				}
+			}
+		});
+		JLabel remove = label(FontManager.getRunescapeSmallFont(), SUBTLE, "x");
+		remove.setToolTipText("Remove from favourites");
+		remove.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+		remove.addMouseListener(new MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(MouseEvent e)
+			{
+				actions.setFavorite(id, false);
+			}
+
+			@Override
+			public void mouseEntered(MouseEvent e)
+			{
+				remove.setForeground(OverlayLayout.RISK);
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e)
+			{
+				remove.setForeground(SUBTLE);
+			}
+		});
+		chip.add(name, BorderLayout.CENTER);
+		chip.add(remove, BorderLayout.EAST);
+		return chip;
+	}
+
+	/** FlowLayout that wraps onto new rows and reports the wrapped height (so it works inside BoxLayout). */
+	private static final class WrapLayout extends java.awt.FlowLayout
+	{
+		WrapLayout(int align, int hgap, int vgap)
+		{
+			super(align, hgap, vgap);
+		}
+
+		@Override
+		public Dimension preferredLayoutSize(java.awt.Container target)
+		{
+			return wrappedSize(target);
+		}
+
+		@Override
+		public Dimension minimumLayoutSize(java.awt.Container target)
+		{
+			Dimension d = wrappedSize(target);
+			d.width = 0;
+			return d;
+		}
+
+		private Dimension wrappedSize(java.awt.Container target)
+		{
+			synchronized (target.getTreeLock())
+			{
+				java.awt.Container c = target;
+				while (c.getWidth() == 0 && c.getParent() != null)
+				{
+					c = c.getParent();
+				}
+				int width = c.getWidth() > 0 ? c.getWidth() : PANEL_WIDTH - 16;
+				Insets in = target.getInsets();
+				int max = width - in.left - in.right - getHgap() * 2;
+				int rowW = 0;
+				int rowH = 0;
+				int w = 0;
+				int h = 0;
+				for (Component m : target.getComponents())
+				{
+					if (!m.isVisible())
+					{
+						continue;
+					}
+					Dimension d = m.getPreferredSize();
+					if (rowW > 0 && rowW + getHgap() + d.width > max)
+					{
+						w = Math.max(w, rowW);
+						h += rowH + getVgap();
+						rowW = 0;
+						rowH = 0;
+					}
+					rowW += (rowW > 0 ? getHgap() : 0) + d.width;
+					rowH = Math.max(rowH, d.height);
+				}
+				w = Math.max(w, rowW);
+				h += rowH;
+				return new Dimension(w + in.left + in.right + getHgap() * 2, h + in.top + in.bottom + getVgap() * 2);
+			}
+		}
+	}
+
+	/** Shows a component's tooltip straight away (used to explain bad input). */
+	private static final class ToolTipManagerHelper
+	{
+		static void show(JComponent c)
+		{
+			javax.swing.ToolTipManager.sharedInstance().mouseMoved(
+				new MouseEvent(c, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, c.getWidth() / 2, c.getHeight() / 2, 0, false));
+		}
 	}
 
 	private JComponent actionRow()
@@ -479,6 +702,7 @@ class WorldListPanel extends PluginPanel
 	private void refreshHeader()
 	{
 		State s = state;
+		refreshFavourites();
 		mapView.setVisible(s.isShowMap());
 		if (s.isShowMap() && s.getRegionStats() != null)
 		{
@@ -829,10 +1053,9 @@ class WorldListPanel extends PluginPanel
 			g.setColor(nameColor);
 			String name = "W" + world.getId();
 			g.drawString(name, STAR_AREA, 15);
-			g.setFont(FontManager.getRunescapeSmallFont());
-			g.setColor(SUBTLE);
-			g.drawString(WorldStats.regionCode(world.getRegion()) + (world.getTypes().contains(WorldType.MEMBERS) ? "" : "  F2P"),
-				STAR_AREA + bold.stringWidth(name) + 6, 15);
+			int tagX = STAR_AREA + bold.stringWidth(name) + 6;
+			tagX = drawFlag(g, world.getRegion(), tagX, 5) + 4;
+			drawPlaque(g, world.getTypes().contains(WorldType.MEMBERS), tagX, 3);
 
 			Integer change = s == null ? null : s.getChanges().get(world.getId());
 			String changeText = change == null || change == 0 ? "" : String.format(" %+d", change);
@@ -966,6 +1189,91 @@ class WorldListPanel extends PluginPanel
 		OverlayLayout.star(g, 1, 7, 6);
 		g.dispose();
 		return new javax.swing.ImageIcon(img);
+	}
+
+	/** World switcher flag sprite per region. */
+	static final Map<WorldRegion, Integer> FLAG_SPRITES = new java.util.EnumMap<>(WorldRegion.class);
+
+	static
+	{
+		FLAG_SPRITES.put(WorldRegion.UNITED_STATES_OF_AMERICA, net.runelite.api.gameval.SpriteID.WorldswitcherFlags.USA);
+		FLAG_SPRITES.put(WorldRegion.UNITED_KINGDOM, net.runelite.api.gameval.SpriteID.WorldswitcherFlags.UK);
+		FLAG_SPRITES.put(WorldRegion.GERMANY, net.runelite.api.gameval.SpriteID.WorldswitcherFlags.GERMANY);
+		FLAG_SPRITES.put(WorldRegion.AUSTRALIA, net.runelite.api.gameval.SpriteID.WorldswitcherFlags.AUSTRALIA);
+		FLAG_SPRITES.put(WorldRegion.BRAZIL, net.runelite.api.gameval.SpriteID.WorldswitcherFlags._10);
+		FLAG_SPRITES.put(WorldRegion.JAPAN, net.runelite.api.gameval.SpriteID.WorldswitcherFlags._12);
+		FLAG_SPRITES.put(WorldRegion.SINGAPORE, net.runelite.api.gameval.SpriteID.WorldswitcherFlags._13);
+		FLAG_SPRITES.put(WorldRegion.SOUTH_AFRICA, net.runelite.api.gameval.SpriteID.WorldswitcherFlags._15);
+	}
+
+	private static final java.awt.Font PLAQUE_FONT = new java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.BOLD, 9);
+	private static final int FLAG_W = 20;
+	private static final int FLAG_H = 10;
+
+	/** Safe to call from any thread. */
+	void setFlag(WorldRegion region, java.awt.image.BufferedImage image)
+	{
+		SwingUtilities.invokeLater(() ->
+		{
+			flags.put(region, image);
+			list.repaint();
+		});
+	}
+
+	/** Draws the region's flag (or its code until the flag has loaded); returns the x just after it. */
+	private int drawFlag(Graphics2D g, WorldRegion region, int x, int y)
+	{
+		java.awt.image.BufferedImage img = region == null ? null : flags.get(region);
+		if (img != null)
+		{
+			Object hint = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION);
+			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g.drawImage(img, x, y, FLAG_W, FLAG_H, null);
+			if (hint != null)
+			{
+				g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+			}
+			g.setColor(new Color(0, 0, 0, 120));
+			g.drawRect(x, y, FLAG_W - 1, FLAG_H - 1);
+			return x + FLAG_W;
+		}
+		g.setFont(FontManager.getRunescapeSmallFont());
+		g.setColor(SUBTLE);
+		String code = WorldStats.regionCode(region);
+		g.drawString(code, x, y + 10);
+		return x + g.getFontMetrics().stringWidth(code);
+	}
+
+	/** Small metallic plaque: gold P2P for members worlds, silver F2P for free ones. */
+	private static void drawPlaque(Graphics2D g, boolean members, int x, int y)
+	{
+		String text = members ? "P2P" : "F2P";
+		// A small bold sans reads better than the pixel font here (its 2 looks like a Z at this size)
+		g.setFont(PLAQUE_FONT);
+		FontMetrics fm = g.getFontMetrics();
+		int w = fm.stringWidth(text) + 8;
+		int h = 13;
+		Color top = members ? new Color(0xF7, 0xD9, 0x6B) : new Color(0xEE, 0xEF, 0xF1);
+		Color bottom = members ? new Color(0xB8, 0x86, 0x1E) : new Color(0x95, 0x9A, 0xA1);
+		Color edge = members ? new Color(0x6B, 0x4A, 0x0A) : new Color(0x4E, 0x52, 0x58);
+		Color ink = members ? new Color(0x3A, 0x26, 0x00) : new Color(0x26, 0x29, 0x2E);
+		Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setPaint(new java.awt.GradientPaint(x, y, top, x, y + h, bottom));
+		g.fillRoundRect(x, y, w, h, 4, 4);
+		g.setColor(edge);
+		g.drawRoundRect(x, y, w - 1, h - 1, 4, 4);
+		g.setColor(new Color(255, 255, 255, 90));
+		g.drawLine(x + 2, y + 1, x + w - 3, y + 1);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+		Object textAa = g.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING);
+		g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+		g.setColor(ink);
+		g.drawString(text, x + 4, y + (h + fm.getAscent() - fm.getDescent()) / 2);
+		if (textAa != null)
+		{
+			g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, textAa);
+		}
 	}
 
 	/** For screenshots: show row {@code index} as hovered (with its Hop button). */

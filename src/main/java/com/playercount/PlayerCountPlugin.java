@@ -147,6 +147,9 @@ public class PlayerCountPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 
 	@Inject
+	private net.runelite.client.game.SpriteManager spriteManager;
+
+	@Inject
 	private MouseManager mouseManager;
 
 	/** Left-clicks on the overlay's world lines hop there. */
@@ -289,6 +292,12 @@ public class PlayerCountPlugin extends Plugin
 			}
 
 			@Override
+			public void setFavorite(int world, boolean on)
+			{
+				PlayerCountPlugin.this.setFavorite(world, on);
+			}
+
+			@Override
 			public void refresh()
 			{
 				refreshNow();
@@ -304,6 +313,10 @@ public class PlayerCountPlugin extends Plugin
 		{
 			clientToolbar.addNavigation(navButton);
 		}
+		// Region flags for the sidebar, from the game's world switcher sprites
+		WorldListPanel flagTarget = panel;
+		WorldListPanel.FLAG_SPRITES.forEach((region, sprite) ->
+			spriteManager.getSpriteAsync(sprite, 0, img -> flagTarget.setFlag(region, img)));
 
 		// Show RuneLite's copy straight away; the live list replaces it a moment later.
 		executor.execute(() ->
@@ -1272,11 +1285,17 @@ public class PlayerCountPlugin extends Plugin
 
 	void toggleFavorite(int world)
 	{
+		setFavorite(world, !favorites.contains(world));
+	}
+
+	/** Adds or removes a favourite (sidebar star, favourites row, or its add box). */
+	void setFavorite(int world, boolean on)
+	{
 		Set<Integer> starred = new TreeSet<>(parseFavorites(config.starredWorlds()));
 		Set<Integer> typed = new TreeSet<>(parseFavorites(config.favoriteWorlds()));
-		if (favorites.contains(world))
+		if (!on)
 		{
-			// Unstar: drop it from both lists
+			// Remove: drop it from both lists
 			starred.remove(world);
 			typed.remove(world);
 		}

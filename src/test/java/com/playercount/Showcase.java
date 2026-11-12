@@ -39,9 +39,12 @@ import net.runelite.http.api.worlds.WorldResult;
  */
 public class Showcase
 {
+	private static File SPRITES;
+
 	public static void main(String[] args) throws Exception
 	{
 		File spriteDir = new File(args[0]);
+		SPRITES = spriteDir;
 		File out = new File(args[1]);
 		out.mkdirs();
 
@@ -325,6 +328,11 @@ public class Showcase
 				}
 
 				@Override
+				public void setFavorite(int world, boolean on)
+				{
+				}
+
+				@Override
 				public void refresh()
 				{
 				}
@@ -335,6 +343,14 @@ public class Showcase
 			f.setSize(PluginPanel.PANEL_WIDTH + 16, 860);
 			panel.set(p);
 			frame.set(f);
+			WorldListPanel.FLAG_SPRITES.forEach((region, sprite) ->
+			{
+				BufferedImage flag = read(new File(SPRITES, sprite + "_0.png"));
+				if (flag != null)
+				{
+					p.setFlag(region, flag);
+				}
+			});
 			p.update(state);
 		});
 		SwingUtilities.invokeAndWait(() -> { }); // let update() run
