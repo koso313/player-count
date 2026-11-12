@@ -57,6 +57,8 @@ final class OverlayLayout
 		boolean warn;
 		/** Pulse the glow: you can die almost anywhere on this world (PvP, Deadman). */
 		boolean pulse;
+		/** Orange underline: risky, but not deadly everywhere. */
+		boolean caution;
 		/** A custom graphic (e.g. region map) instead of text; made fresh each frame. */
 		java.util.function.Supplier<LayoutableRenderableEntity> component;
 		/** Width of the custom graphic's cell in the horizontal strip. */
@@ -128,6 +130,12 @@ final class OverlayLayout
 			this.pulse = on;
 			return this;
 		}
+
+		Item caution(boolean on)
+		{
+			this.caution = on;
+			return this;
+		}
 	}
 
 	/**
@@ -194,7 +202,7 @@ final class OverlayLayout
 					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star).glow(item.warn, item.pulse);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered || item.caution).star(item.star).glow(item.warn, item.pulse);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
@@ -332,7 +340,7 @@ final class OverlayLayout
 						text(g, p.getText(), p.getColor(), vx + vw, base);
 						vw += value.stringWidth(p.getText());
 					}
-					if (item.hovered && vw > 0)
+					if ((item.hovered || item.caution) && vw > 0)
 					{
 						g.setColor(item.parts.get(0).getColor());
 						g.drawLine(vx, base + 2, vx + vw - 1, base + 2);
@@ -357,7 +365,7 @@ final class OverlayLayout
 					}
 					int vx = x + (cw - vw) / 2;
 					item.hitBox.setBounds(x, y, cw, h);
-					if (item.hovered && vw > 0)
+					if ((item.hovered || item.caution) && vw > 0)
 					{
 						int uy = y + small.getHeight() + value.getAscent() + 2;
 						g.setColor(item.parts.get(0).getColor());
@@ -427,6 +435,8 @@ final class OverlayLayout
 	}
 
 	static final Color RISK = new Color(0xFF, 0x40, 0x30);
+	/** Risky but not deadly everywhere (Wilderness-only danger, separate-account worlds). */
+	static final Color CAUTION = new Color(0xFF, 0x8C, 0x1A);
 
 	/** A red glow around a box to flag a risky world; it pulses only for worlds where you can die anywhere. */
 	static void glow(Graphics2D g, int x, int y, int w, int h, boolean pulsing)

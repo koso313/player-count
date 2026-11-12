@@ -456,9 +456,10 @@ class WorldListPanel extends PluginPanel
 			World sug = s.getSuggestion();
 			String risk = sug != null && s.isWarnRisky() ? WorldStats.risk(sug) : null;
 			hopButton.setText(sug == null ? "No match" : "Hop W" + sug.getId() + (risk != null ? " " + risk + "!" : " (" + sug.getPlayers() + ")"));
-			hopButton.setForeground(risk != null ? OverlayLayout.RISK : Color.WHITE);
+			Color riskColor = risk == null ? null : WorldStats.deadly(sug) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+			hopButton.setForeground(riskColor != null ? riskColor : Color.WHITE);
 			hopButton.setBorder(BorderFactory.createCompoundBorder(
-				BorderFactory.createLineBorder(risk != null ? OverlayLayout.RISK : ColorScheme.MEDIUM_GRAY_COLOR, risk != null ? 2 : 1),
+				BorderFactory.createLineBorder(riskColor != null ? riskColor : ColorScheme.MEDIUM_GRAY_COLOR, risk != null ? 2 : 1),
 				BorderFactory.createEmptyBorder(risk != null ? 4 : 5, 6, risk != null ? 4 : 5, 6)));
 			hopButton.setToolTipText(risk != null
 				? "Careful: world " + sug.getId() + " is a " + risk + " world"
@@ -724,12 +725,22 @@ class WorldListPanel extends PluginPanel
 			}
 			if (s != null && s.isWarnRisky() && WorldStats.risk(world) != null)
 			{
-				g.setColor(new Color(255, 40, 30, 40));
-				g.fillRect(0, 0, w, ROW_HEIGHT - 1);
-				g.setColor(new Color(255, 64, 48, 200));
-				g.drawRect(1, 1, w - 3, ROW_HEIGHT - 4);
-				g.setColor(new Color(255, 64, 48, 90));
-				g.drawRect(2, 2, w - 5, ROW_HEIGHT - 6);
+				if (WorldStats.deadly(world))
+				{
+					// Attackable almost anywhere: red tint and outline
+					g.setColor(new Color(255, 40, 30, 40));
+					g.fillRect(0, 0, w, ROW_HEIGHT - 1);
+					g.setColor(new Color(255, 64, 48, 200));
+					g.drawRect(1, 1, w - 3, ROW_HEIGHT - 4);
+					g.setColor(new Color(255, 64, 48, 90));
+					g.drawRect(2, 2, w - 5, ROW_HEIGHT - 6);
+				}
+				else
+				{
+					// Risky in the Wilderness or a separate-account world: orange underline
+					g.setColor(OverlayLayout.CAUTION);
+					g.fillRect(STAR_AREA, ROW_HEIGHT - 4, w - STAR_AREA - 8, 2);
+				}
 			}
 
 			star(g, 11, 12, fav);

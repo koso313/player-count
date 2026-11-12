@@ -234,7 +234,7 @@ public interface PlayerCountConfig extends Config
 		return ThemedOrder.BUSIEST;
 	}
 
-	@ConfigItem(keyName = "warnRisky", name = "Warn on risky worlds", description = "Themed worlds can include risky worlds. PvP and Deadman worlds (attackable almost anywhere) pulse red; High Risk, Bounty Hunter, Wilderness PK, Leagues, beta, speedrun and fresh-start worlds get a steady red outline. Chat warns as you hop.", section = finderSection, position = 5)
+	@ConfigItem(keyName = "warnRisky", name = "Warn on risky worlds", description = "Themed worlds can include risky worlds. PvP and Deadman worlds (attackable almost anywhere) pulse red; High Risk, Bounty Hunter, Wilderness PK, Leagues, beta, speedrun and fresh-start worlds are orange with an orange underline. Chat warns as you hop.", section = finderSection, position = 5)
 	default boolean warnRisky()
 	{
 		return true;

@@ -360,10 +360,12 @@ class PlayerCountOverlay extends Overlay
 			{
 				int ping = config.pingEnabled() ? plugin.pingOf(s.getId()) : -1;
 				String risk = config.warnRisky() ? WorldStats.risk(s) : null;
-				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), risk != null ? OverlayLayout.RISK : UP)
+				boolean deadly = risk != null && WorldStats.deadly(s);
+				Color worldColor = risk == null ? UP : deadly ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), worldColor)
 					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping))
-					.add(risk == null ? "" : " " + risk, OverlayLayout.RISK)
-					.target(s).warn(risk != null).pulse(risk != null && WorldStats.deadly(s)));
+					.add(risk == null ? "" : " " + risk, worldColor)
+					.target(s).warn(deadly).pulse(deadly).caution(risk != null && !deadly));
 			}
 		}
 
