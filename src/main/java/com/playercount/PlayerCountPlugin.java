@@ -57,8 +57,6 @@ import net.runelite.client.config.Notification;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ClientShutdown;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.events.PluginChanged;
-import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.events.WorldsFetch;
 import net.runelite.client.game.WorldService;
 import net.runelite.client.input.KeyManager;
@@ -151,9 +149,6 @@ public class PlayerCountPlugin extends Plugin
 
 	@Inject
 	private MouseManager mouseManager;
-
-	@Inject
-	private EventBus eventBus;
 
 	/** Left-clicks on the overlay's world lines hop there. */
 	private final MouseAdapter overlayClicks = new MouseAdapter()
@@ -258,7 +253,8 @@ public class PlayerCountPlugin extends Plugin
 	protected void startUp()
 	{
 		records = DailyRecords.parse(configManager.getConfiguration(PlayerCountConfig.GROUP, RECORDS_KEY));
-		favorites = parseFavorites(config.favoriteWorlds());
+		recomputeFavorites();
+		syncFavoritesBox();
 		Instant now = Instant.now();
 		store.load(HISTORY_FILE, in -> history6h.read(in, now));
 		store.load(USAGE_FILE, usage::read);
@@ -475,9 +471,14 @@ public class PlayerCountPlugin extends Plugin
 				startPing();
 			}
 		}
-		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
+		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()) || PlayerCountConfig.STARRED_KEY.equals(e.getKey()))
 		{
-			favorites = parseFavorites(config.favoriteWorlds());
+			recomputeFavorites();
+			// An open settings panel can write back an old box without the stars; put them back.
+			if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
+			{
+				syncFavoritesBox();
+			}
 		}
 		if (PlayerCountConfig.SIDEBAR_KEY.equals(e.getKey()))
 		{
@@ -1266,18 +1267,49 @@ public class PlayerCountPlugin extends Plugin
 		return favorites.contains(world);
 	}
 
+	/** Favourites = worlds starred in the sidebar + worlds typed into Favourite worlds. */
+	private void recomputeFavorites()
+	{
+		Set<Integer> all = new TreeSet<>(parseFavorites(config.starredWorlds()));
+		all.addAll(parseFavorites(config.favoriteWorlds()));
+		favorites = Collections.unmodifiableSet(all);
+	}
+
+	/** Makes the Favourite worlds box list every favourite, so reopening the settings shows starred worlds. */
+	private void syncFavoritesBox()
+	{
+		String joined = join(favorites);
+		if (!joined.equals(join(parseFavorites(config.favoriteWorlds()))))
+		{
+			configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, joined);
+		}
+	}
+
+	private static String join(Set<Integer> worlds)
+	{
+		return worlds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+	}
+
 	void toggleFavorite(int world)
 	{
-		Set<Integer> next = new TreeSet<>(favorites);
-		if (!next.remove(world))
+		Set<Integer> starred = new TreeSet<>(parseFavorites(config.starredWorlds()));
+		Set<Integer> typed = new TreeSet<>(parseFavorites(config.favoriteWorlds()));
+		if (favorites.contains(world))
 		{
-			next.add(world);
+			// Unstar: drop it from both lists
+			starred.remove(world);
+			typed.remove(world);
 		}
-		favorites = Collections.unmodifiableSet(next);
-		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY,
-			next.stream().map(String::valueOf).collect(Collectors.joining(", ")));
-		// RuneLite's settings panel only redraws on a plugin change, so nudge it to show the new list.
-		eventBus.post(new PluginChanged(this, true));
+		else
+		{
+			starred.add(world);
+			typed.add(world);
+		}
+		// Stars go in their own hidden setting (an open settings panel can't overwrite it); the visible box
+		// gets the full list so it shows the stars next time the settings are opened.
+		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.STARRED_KEY, join(starred));
+		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(typed));
+		recomputeFavorites();
 		clientThread.invokeLater(() ->
 		{
 			updateSuggestion();

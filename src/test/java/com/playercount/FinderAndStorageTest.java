@@ -294,6 +294,15 @@ public class FinderAndStorageTest
 	}
 
 	@Test
+	public void favouritesParseIgnoresJunk2()
+	{
+		// Stars and typed worlds are merged; spacing and order in the box don't matter
+		java.util.Set<Integer> merged = new java.util.TreeSet<>(PlayerCountPlugin.parseFavorites("427"));
+		merged.addAll(PlayerCountPlugin.parseFavorites(" 330 ,302"));
+		assertEquals(Arrays.asList(302, 330, 427), new java.util.ArrayList<>(merged));
+	}
+
+	@Test
 	public void favouritesParseIgnoresJunk()
 	{
 		assertEquals(new HashSet<>(Arrays.asList(302, 330)), PlayerCountPlugin.parseFavorites("302, x,330,,"));
