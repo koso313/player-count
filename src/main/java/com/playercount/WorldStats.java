@@ -44,6 +44,9 @@ final class WorldStats
 		WorldType.DEADMAN,
 		WorldType.SEASONAL);
 
+	/** Special worlds a theme may still send you to (safe minigames); everything else special stays blocked. */
+	private static final Set<WorldType> THEME_ALLOWED = EnumSet.of(WorldType.PVP_ARENA, WorldType.LAST_MAN_STANDING);
+
 	private static final Pattern SKILL_TOTAL = Pattern.compile("(\\d{3,4})");
 
 	private WorldStats()
@@ -86,6 +89,9 @@ final class WorldStats
 		@Builder.Default
 		Map<Integer, Integer> usual = Collections.emptyMap();
 		boolean preferUsual;
+		/** For THEMED_* modes: activity texts to match (case-insensitive, contains). */
+		@Builder.Default
+		List<String> themes = Collections.emptyList();
 	}
 
 	enum Mode
@@ -98,7 +104,37 @@ final class WorldStats
 		/** Only favourites, fewest players first. */
 		FAVOURITES_BY_PLAYERS,
 		/** Only favourites, ping and players weighed equally (each scaled against the other favourites). */
-		FAVOURITES_BALANCED
+		FAVOURITES_BALANCED,
+		/** Worlds whose activity matches a theme, busiest first. */
+		THEMED_BUSIEST,
+		/** Themed, lowest ping first. */
+		THEMED_BY_PING,
+		/** Themed, busy and low ping weighed equally. */
+		THEMED_BALANCED
+	}
+
+	static boolean isThemed(Mode m)
+	{
+		return m == Mode.THEMED_BUSIEST || m == Mode.THEMED_BY_PING || m == Mode.THEMED_BALANCED;
+	}
+
+	/** True if the world's activity contains any of the themes. */
+	static boolean matchesTheme(World w, List<String> themes)
+	{
+		String activity = w.getActivity() == null ? "" : w.getActivity().toLowerCase(Locale.ROOT);
+		if (activity.isEmpty() || "-".equals(activity))
+		{
+			return false;
+		}
+		for (String t : themes)
+		{
+			String needle = t.trim().toLowerCase(Locale.ROOT);
+			if (!needle.isEmpty() && activity.contains(needle))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	static Totals totals(List<World> worlds)
@@ -156,9 +192,17 @@ final class WorldStats
 		{
 			return false;
 		}
-		if (isSpecial(w))
+		boolean themed = isThemed(c.getMode());
+		if (themed && !matchesTheme(w, c.getThemes()))
 		{
 			return false;
+		}
+		for (WorldType t : w.getTypes())
+		{
+			if (SPECIAL.contains(t) && !(themed && THEME_ALLOWED.contains(t)))
+			{
+				return false;
+			}
 		}
 		if (w.getTypes().contains(WorldType.MEMBERS) != c.isMembers())
 		{
@@ -194,10 +238,12 @@ final class WorldStats
 		switch (c.getMode())
 		{
 			case BUSIEST:
+			case THEMED_BUSIEST:
 				order = Comparator.comparingInt(World::getPlayers).reversed();
 				break;
 			case LOWEST_PING:
 			case FAVOURITES_BY_PING:
+			case THEMED_BY_PING:
 				order = Comparator.<World>comparingInt(w -> unknownLast(c.getPings().getOrDefault(w.getId(), -1)))
 					.thenComparingInt(World::getPlayers);
 				break;
@@ -210,7 +256,11 @@ final class WorldStats
 		List<World> eligible = worlds.stream().filter(w -> eligible(w, c)).collect(Collectors.toList());
 		if (c.getMode() == Mode.FAVOURITES_BALANCED)
 		{
-			order = balanced(eligible, c.getPings());
+			order = balanced(eligible, c.getPings(), false);
+		}
+		else if (c.getMode() == Mode.THEMED_BALANCED)
+		{
+			order = balanced(eligible, c.getPings(), true);
 		}
 		eligible.sort(order.thenComparingInt(World::getId));
 		return eligible;
@@ -218,9 +268,9 @@ final class WorldStats
 
 	/**
 	 * Ping and players each scaled 0..1 against the worlds being compared, then added: lowest total wins.
-	 * A world with no ping yet counts as the slowest.
+	 * A world with no ping yet counts as the slowest. {@code busy} rewards more players instead of fewer.
 	 */
-	static Comparator<World> balanced(List<World> worlds, Map<Integer, Integer> pings)
+	static Comparator<World> balanced(List<World> worlds, Map<Integer, Integer> pings, boolean busy)
 	{
 		int maxPing = 1;
 		int maxPlayers = 1;
@@ -234,7 +284,8 @@ final class WorldStats
 		return Comparator.comparingDouble(w ->
 		{
 			int ping = pings.getOrDefault(w.getId(), -1);
-			return (ping < 0 ? 1.0 : ping / mp) + w.getPlayers() / ml;
+			double crowd = w.getPlayers() / ml;
+			return (ping < 0 ? 1.0 : ping / mp) + (busy ? 1.0 - crowd : crowd);
 		});
 	}
 

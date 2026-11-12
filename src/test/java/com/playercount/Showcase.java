@@ -117,11 +117,14 @@ public class Showcase
 		miniItems.add(OverlayLayout.Item.line("Ping").add("34", PlayerCountOverlay.UP));
 		miniItems.add(OverlayLayout.Item.line("Near").add("14", Color.WHITE));
 		miniItems.add(OverlayLayout.Item.line("Quiet").add("W674", PlayerCountOverlay.UP));
+		miniItems.add(OverlayLayout.Item.graph(series, graphEnd, Duration.ofHours(1)));
+		List<OverlayLayout.Item> sizeItems = new ArrayList<>(strip);
+		sizeItems.add(OverlayLayout.Item.graph(series, graphEnd, Duration.ofHours(1)));
 		for (PlayerCountConfig.Layout layout : PlayerCountConfig.Layout.values())
 		{
 			List<BufferedImage> row = Arrays.asList(
-				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, strip, false, false),
-				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, strip, true, false),
+				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, sizeItems, false, false),
+				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, sizeItems, true, false),
 				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, miniItems, true, true),
 				overlay(painter, PlayerCountConfig.FrameStyle.DARK, layout, miniItems, true, true),
 				overlay(painter, PlayerCountConfig.FrameStyle.RUNELITE, layout, miniItems, true, true));

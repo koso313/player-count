@@ -204,7 +204,7 @@ public interface PlayerCountConfig extends Config
 
 	// ---- World finder ----
 
-	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for, or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full.", section = finderSection, position = 0)
+	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for, or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full (Themed worlds allows PvP Arena and Last Man Standing if your themes name them).", section = finderSection, position = 0)
 	default FinderMode finderMode()
 	{
 		return FinderMode.QUIETEST;
@@ -222,25 +222,37 @@ public interface PlayerCountConfig extends Config
 		return FavouriteOrder.LOWEST_PING;
 	}
 
-	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = finderSection, position = 3)
+	@ConfigItem(keyName = "themedWorlds", name = "Themes", description = "For Find: Themed worlds. Comma-separated activities to look for, e.g. Wintertodt, Tempoross, Trade, House Party. Matches any world whose activity contains the text. The sidebar's search shows what activities exist.", section = finderSection, position = 3)
+	default String themedWorlds()
+	{
+		return "";
+	}
+
+	@ConfigItem(keyName = "themedOrder", name = "Themed order", description = "For Find: Themed worlds, which matching world comes first (and the order Next world rotates through them). Both prefers busy, low-ping worlds.", section = finderSection, position = 4)
+	default ThemedOrder themedOrder()
+	{
+		return ThemedOrder.BUSIEST;
+	}
+
+	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = finderSection, position = 5)
 	default Membership membership()
 	{
 		return Membership.SAME_AS_CURRENT;
 	}
 
-	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = finderSection, position = 4)
+	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = finderSection, position = 6)
 	default RegionFilter region()
 	{
 		return RegionFilter.ANY;
 	}
 
-	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = finderSection, position = 5)
+	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = finderSection, position = 7)
 	default boolean allowSkillTotal()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = finderSection, position = 6)
+	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = finderSection, position = 8)
 	@Range(max = 1000)
 	@Units(Units.MILLISECONDS)
 	default int maxPing()
@@ -248,13 +260,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = finderSection, position = 7)
+	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = finderSection, position = 9)
 	default boolean preferUsual()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = finderSection, position = 8)
+	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = finderSection, position = 10)
 	@Range(max = 120)
 	@Units(Units.MINUTES)
 	default int skipRecentMinutes()
@@ -262,13 +274,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 9)
+	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 11)
 	default Keybind hopKey()
 	{
 		return Keybind.NOT_SET;
 	}
 
-	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 10)
+	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 12)
 	default Keybind nextWorldKey()
 	{
 		return Keybind.NOT_SET;
@@ -337,6 +349,26 @@ public interface PlayerCountConfig extends Config
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum ThemedOrder
+	{
+		BUSIEST("Busiest first"),
+		LOWEST_PING("Lowest ping first"),
+		BOTH("Both (busy and low ping)");
+
+		private final String label;
+
+		ThemedOrder(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum FavouriteOrder
@@ -463,7 +495,8 @@ public interface PlayerCountConfig extends Config
 		QUIETEST("Quietest"),
 		BUSIEST("Busiest"),
 		LOWEST_PING("Lowest ping"),
-		FAVOURITES("Favourites");
+		FAVOURITES("Favourites"),
+		THEMED("Themed worlds");
 
 		private final String label;
 

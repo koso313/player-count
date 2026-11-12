@@ -194,7 +194,7 @@ final class OverlayLayout
 			this.widths = widths;
 			this.oneLine = oneLine;
 			this.cellPad = oneLine ? 3 : compact ? 4 : 7;
-			this.graphWidth = oneLine ? 48 : compact ? 64 : 90;
+			this.graphWidth = oneLine ? 76 : compact ? 80 : 96;
 			this.items = items;
 			this.style = style;
 			this.labelColor = labelColor;

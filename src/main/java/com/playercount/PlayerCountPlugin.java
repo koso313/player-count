@@ -949,6 +949,19 @@ public class PlayerCountPlugin extends Plugin
 			case LOWEST_PING:
 				mode = WorldStats.Mode.LOWEST_PING;
 				break;
+			case THEMED:
+				switch (config.themedOrder())
+				{
+					case LOWEST_PING:
+						mode = WorldStats.Mode.THEMED_BY_PING;
+						break;
+					case BOTH:
+						mode = WorldStats.Mode.THEMED_BALANCED;
+						break;
+					default:
+						mode = WorldStats.Mode.THEMED_BUSIEST;
+				}
+				break;
 			case FAVOURITES:
 				switch (config.favouriteOrder())
 				{
@@ -979,6 +992,7 @@ public class PlayerCountPlugin extends Plugin
 			.favorites(favorites)
 			.usual(config.preferUsual() ? usage.usualAll(Instant.now()) : Collections.emptyMap())
 			.preferUsual(config.preferUsual())
+			.themes(themes())
 			.build();
 	}
 
@@ -1075,8 +1089,25 @@ public class PlayerCountPlugin extends Plugin
 
 	// ---- Favourites ----
 
+	/** The Themes setting split into terms. */
+	private List<String> themes()
+	{
+		String raw = config.themedWorlds();
+		if (raw == null || raw.trim().isEmpty())
+		{
+			return Collections.emptyList();
+		}
+		return java.util.Arrays.stream(raw.split(",")).map(String::trim).filter(t -> !t.isEmpty()).collect(Collectors.toList());
+	}
+
 	private String noMatchMessage()
 	{
+		if (config.finderMode() == PlayerCountConfig.FinderMode.THEMED)
+		{
+			return themes().isEmpty()
+				? "Add some themes first, under World finder > Themes (e.g. Wintertodt, Tempoross)."
+				: "No open world matches your themes (" + String.join(", ", themes()) + "). The sidebar's search shows what activities exist.";
+		}
 		if (config.finderMode() == PlayerCountConfig.FinderMode.FAVOURITES && favorites.isEmpty())
 		{
 			return "You have no favourite worlds yet. Add some under World finder > Favourite worlds, or star them in the sidebar.";

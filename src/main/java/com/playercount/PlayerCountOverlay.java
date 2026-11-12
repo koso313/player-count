@@ -405,6 +405,8 @@ class PlayerCountOverlay extends Overlay
 				return "Fast";
 			case FAVOURITES:
 				return "Fav";
+			case THEMED:
+				return "Theme";
 			default:
 				return "Quiet";
 		}

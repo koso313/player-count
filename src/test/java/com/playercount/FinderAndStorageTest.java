@@ -92,6 +92,36 @@ public class FinderAndStorageTest
 	}
 
 	@Test
+	public void themedWorldsMatchActivitiesAndAllowSafeMinigames()
+	{
+		List<World> worlds = Arrays.asList(
+			themed(307, 400, "Wintertodt"),
+			themed(309, 900, "Wintertodt"),
+			themed(320, 150, "Tempoross"),
+			themed(330, 50, "House Party, Gilded Altar"),
+			themed(319, 300, "Last Man Standing", WorldType.LAST_MAN_STANDING),
+			themed(325, 500, "PvP world - Wintertodt fans", WorldType.PVP));
+		java.util.List<String> themes = Arrays.asList(" wintertodt", "TEMPOROSS", "last man");
+		List<World> busiest = WorldStats.rank(worlds, base().themes(themes).mode(WorldStats.Mode.THEMED_BUSIEST).build());
+		assertEquals(Arrays.asList(309, 307, 319, 320), ids(busiest)); // PvP world never, LMS allowed by theme
+		Map<Integer, Integer> pings = map(307, 20, 309, 200, 320, 40, 319, 60);
+		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BY_PING).build()).getId());
+		// Both: 307 = 0.1 ping + 0.56 quietness = 0.66 beats 309 = 1.0 + 0 = 1.0
+		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BALANCED).build()).getId());
+		assertNull(WorldStats.pick(worlds, base().mode(WorldStats.Mode.THEMED_BUSIEST).build())); // no themes
+		// Outside Themed mode an LMS world is still never suggested
+		assertTrue(WorldStats.rank(worlds, base().build()).stream().noneMatch(w -> w.getId() == 319));
+	}
+
+	private static World themed(int id, int players, String activity, WorldType... extra)
+	{
+		EnumSet<WorldType> types = EnumSet.of(WorldType.MEMBERS);
+		types.addAll(Arrays.asList(extra));
+		return World.builder().id(id).players(players).region(WorldRegion.UNITED_KINGDOM).activity(activity)
+			.address("a").types(types).build();
+	}
+
+	@Test
 	public void widthsIgnoreWhichDigitsAndOnlyGrow()
 	{
 		java.awt.FontMetrics fm = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB)
