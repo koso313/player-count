@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,26 +27,32 @@ class PingService
 {
 	private static final int GAME_PORT = 43594;
 	private static final int TIMEOUT_MS = 2000;
-	/** How often the current world is re-pinged. */
-	private static final long CURRENT_EVERY_S = 10;
+	/** How often favourites are re-pinged. */
+	private static final long FAVOURITES_EVERY_S = 20;
 	/** How often every world is re-pinged (one at a time, spread out). */
-	private static final long SWEEP_EVERY_S = 300;
-	private static final long SWEEP_SPACING_MS = 150;
+	private static final long SWEEP_EVERY_S = 120;
+	/** How often to check whether a sweep is due (also covers the world list arriving after start). */
+	private static final long SWEEP_CHECK_S = 5;
+	private static final long SWEEP_SPACING_MS = 100;
 
 	private final Map<Integer, Integer> pings = new ConcurrentHashMap<>();
 	private ScheduledExecutorService thread;
+	private long lastSweep;
 
 	/**
 	 * @param worlds  latest world list (may be empty before the first download)
 	 * @param current id of the world the player is on, or a non-positive value if none
+	 * @param first   worlds to ping first in each sweep, and more often (favourites)
+	 * @param currentEverySeconds how often to re-ping the current world
 	 */
-	synchronized void start(Supplier<List<World>> worlds, IntSupplier current)
+	synchronized void start(Supplier<List<World>> worlds, IntSupplier current, Supplier<Set<Integer>> first, int currentEverySeconds)
 	{
 		if (thread != null)
 		{
 			return;
 		}
-		thread = Executors.newSingleThreadScheduledExecutor(r ->
+		// Two threads, so a long all-worlds sweep never holds up the current world's ping.
+		thread = Executors.newScheduledThreadPool(2, r ->
 		{
 			Thread t = new Thread(r, "player-count-ping");
 			t.setDaemon(true);
@@ -65,11 +72,33 @@ class PingService
 					}
 				}
 			}
-		}), 1, CURRENT_EVERY_S, TimeUnit.SECONDS);
+		}), 1, Math.max(1, currentEverySeconds), TimeUnit.SECONDS);
+		thread.scheduleWithFixedDelay(() -> safely(() ->
+		{
+			Set<Integer> favs = first.get();
+			for (World w : worlds.get())
+			{
+				if (favs.contains(w.getId()))
+				{
+					measure(w);
+				}
+			}
+		}), FAVOURITES_EVERY_S, FAVOURITES_EVERY_S, TimeUnit.SECONDS);
+		lastSweep = 0;
 		thread.scheduleWithFixedDelay(() -> safely(() ->
 		{
 			List<World> list = new ArrayList<>(worlds.get());
+			long now = System.currentTimeMillis();
+			// Wait for the world list, then sweep straight away and every SWEEP_EVERY_S after.
+			if (list.isEmpty() || (lastSweep != 0 && now - lastSweep < SWEEP_EVERY_S * 1000))
+			{
+				return;
+			}
+			lastSweep = now;
+			Set<Integer> priority = first.get();
 			Collections.shuffle(list);
+			list.sort((a, b) -> Boolean.compare(!priority.contains(a.getId()), !priority.contains(b.getId())));
+			int done = 0;
 			for (World w : list)
 			{
 				if (Thread.currentThread().isInterrupted())
@@ -79,10 +108,13 @@ class PingService
 				if (w.getPlayers() >= 0)
 				{
 					measure(w);
+					done++;
 					sleep(SWEEP_SPACING_MS);
 				}
 			}
-		}), 3, SWEEP_EVERY_S, TimeUnit.SECONDS);
+			log.debug("Pinged {} worlds in {}s ({} reachable)", done, (System.currentTimeMillis() - now) / 1000,
+				pings.values().stream().filter(p -> p >= 0).count());
+		}), 1, SWEEP_CHECK_S, TimeUnit.SECONDS);
 	}
 
 	synchronized void stop()

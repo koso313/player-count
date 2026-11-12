@@ -322,6 +322,14 @@ public interface PlayerCountConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "pingInterval", name = "Ping every", description = "How often to re-ping your current world (other worlds: favourites every 20s, all worlds every 2 minutes)", section = dataSection, position = 2)
+	@Range(min = 1, max = 60)
+	@Units(Units.SECONDS)
+	default int pingInterval()
+	{
+		return 3;
+	}
+
 	@ConfigItem(keyName = FAVORITES_KEY, name = "", description = "", hidden = true)
 	default String favoriteWorlds()
 	{

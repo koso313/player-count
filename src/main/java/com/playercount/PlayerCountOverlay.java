@@ -249,9 +249,16 @@ class PlayerCountOverlay extends Overlay
 		{
 			World s = plugin.getSuggestion();
 			String label = config.finderMode().toString();
-			items.add(s == null
-				? OverlayLayout.Item.line(label).add("none", MUTED)
-				: OverlayLayout.Item.line(label).add(worldText(s, true), UP));
+			if (s == null)
+			{
+				items.add(OverlayLayout.Item.line(label).add("none", MUTED));
+			}
+			else
+			{
+				int ping = config.pingEnabled() ? plugin.pingOf(s.getId()) : -1;
+				items.add(OverlayLayout.Item.line(label).add(worldText(s, true), UP)
+					.add(ping < 0 ? "" : " " + ping + "ms", pingColor(ping)));
+			}
 		}
 
 		for (Map.Entry<String, World> e : plugin.activityWorlds().entrySet())
@@ -304,11 +311,6 @@ class PlayerCountOverlay extends Overlay
 		if (withRegion)
 		{
 			s.append(' ').append(WorldStats.regionCode(w.getRegion()));
-			int ping = config.pingEnabled() ? plugin.pingOf(w.getId()) : -1;
-			if (ping >= 0)
-			{
-				s.append(' ').append(ping).append("ms");
-			}
 		}
 		return s.toString().trim();
 	}

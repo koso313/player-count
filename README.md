@@ -53,7 +53,8 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 - Search by world number or activity, filter by membership and region, and sort by quietest, busiest,
   lowest ping, usually quiet or world number.
 - **Favourites**: click the star to favourite a world; favourites stay at the top.
-- **Double-click** a world (or press Enter) to hop there. Right-click for more options.
+- **Hop** button on the row you hover over, or double-click a world (or press Enter). Right-click for
+  more options.
 
 ## Alerts and chat
 
@@ -68,8 +69,9 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
   minimum). If it can't be reached, the plugin falls back to RuneLite's own world list, which updates
   every 10 minutes.
 - **Ping** is measured by briefly opening a connection to each world server's game port, the way
-  RuneLite's World Hopper does. Your current world is checked every 10 seconds, and every world is
-  checked one at a time every 5 minutes. You can turn ping off in the Data settings.
+  RuneLite's World Hopper does. Your current world is checked every 3 seconds (adjustable), favourites
+  every 20 seconds, and every world one at a time every 2 minutes. Ping is colour-coded: green under
+  80 ms, amber under 150 ms, red above. You can turn ping off in the Data settings.
 - **Population history** and **usual counts** are stored locally in `~/.runelite/player-count/`.
   Nothing is sent anywhere.
 

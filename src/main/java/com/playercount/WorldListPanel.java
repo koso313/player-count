@@ -127,6 +127,9 @@ class WorldListPanel extends PluginPanel
 	private static final Color ROW_SELECTED = new Color(0x3A, 0x3A, 0x3A);
 	private static final int ROW_HEIGHT = 36;
 	private static final int STAR_AREA = 22;
+	/** The Hop button shown on the hovered row. */
+	private static final int HOP_W = 38;
+	private static final int HOP_H = 20;
 
 	private final Actions actions;
 
@@ -190,7 +193,8 @@ class WorldListPanel extends PluginPanel
 					hoverIndex = i;
 					list.repaint();
 				}
-				list.setCursor(i >= 0 && e.getX() < STAR_AREA ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+				boolean clickable = i >= 0 && (e.getX() < STAR_AREA || overHop(e));
+				list.setCursor(clickable ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
 			}
 		});
 		list.addMouseListener(new MouseAdapter()
@@ -219,6 +223,10 @@ class WorldListPanel extends PluginPanel
 				else if (e.getX() < STAR_AREA)
 				{
 					actions.toggleFavorite(w.getId());
+				}
+				else if (overHop(e) && !isCurrent(w))
+				{
+					actions.hop(w);
 				}
 				else if (e.getClickCount() == 2)
 				{
@@ -542,6 +550,23 @@ class WorldListPanel extends PluginPanel
 		return null;
 	}
 
+	/** True when the mouse is over the Hop button of the row under it. */
+	private boolean overHop(MouseEvent e)
+	{
+		int i = indexAt(e);
+		if (i < 0)
+		{
+			return false;
+		}
+		java.awt.Rectangle cell = list.getCellBounds(i, i);
+		return e.getX() >= cell.width - HOP_W - 6 && e.getX() <= cell.width - 6;
+	}
+
+	private boolean isCurrent(World w)
+	{
+		return state != null && w.getId() == state.getCurrentWorld();
+	}
+
 	private int indexAt(MouseEvent e)
 	{
 		int i = list.locationToIndex(e.getPoint());
@@ -717,6 +742,23 @@ class WorldListPanel extends PluginPanel
 			g.setColor(SUBTLE);
 			g.drawString(ellipsize(activity(world), small, rx - STAR_AREA), STAR_AREA, 30);
 
+			if (hover && !current)
+			{
+				// Hop button over the right-hand figures while the row is hovered
+				int bx = w - HOP_W - 6;
+				int by = (ROW_HEIGHT - HOP_H) / 2;
+				g.setColor(ROW_HOVER);
+				g.fillRect(bx - 8, 0, HOP_W + 14, ROW_HEIGHT - 1);
+				g.setColor(new Color(0x2E, 0x5E, 0x2A));
+				g.fillRoundRect(bx, by, HOP_W, HOP_H, 6, 6);
+				g.setColor(new Color(0x6F, 0xC0, 0x5A));
+				g.drawRoundRect(bx, by, HOP_W - 1, HOP_H - 1, 6, 6);
+				g.setFont(FontManager.getRunescapeBoldFont());
+				FontMetrics hb = g.getFontMetrics();
+				g.setColor(Color.WHITE);
+				g.drawString("Hop", bx + (HOP_W - hb.stringWidth("Hop")) / 2, by + (HOP_H + hb.getAscent()) / 2 - 2);
+			}
+
 			g.setColor(ColorScheme.DARK_GRAY_COLOR);
 			g.drawLine(0, ROW_HEIGHT - 1, w, ROW_HEIGHT - 1);
 		}
@@ -768,7 +810,7 @@ class WorldListPanel extends PluginPanel
 			{
 				t.append("<br>Ping ").append(ping).append(" ms");
 			}
-			t.append("<br><i>Double-click to hop, click the star to favourite, right-click for more</i></html>");
+			t.append("<br><i>Click Hop (or double-click) to hop, click the star to favourite, right-click for more</i></html>");
 			return t.toString();
 		}
 	}

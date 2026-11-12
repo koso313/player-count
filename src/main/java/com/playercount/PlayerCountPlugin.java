@@ -297,7 +297,7 @@ public class PlayerCountPlugin extends Plugin
 
 	private void startPing()
 	{
-		pingService.start(() -> pingWorlds, () -> pingCurrent);
+		pingService.start(() -> pingWorlds, () -> pingCurrent, () -> favorites, config.pingInterval());
 	}
 
 	private void saveData()
@@ -431,15 +431,12 @@ public class PlayerCountPlugin extends Plugin
 		{
 			scheduleRefresh();
 		}
-		if ("pingEnabled".equals(e.getKey()))
+		if ("pingEnabled".equals(e.getKey()) || "pingInterval".equals(e.getKey()))
 		{
+			pingService.stop();
 			if (config.pingEnabled())
 			{
 				startPing();
-			}
-			else
-			{
-				pingService.stop();
 			}
 		}
 		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
@@ -536,8 +533,8 @@ public class PlayerCountPlugin extends Plugin
 
 		updateSuggestion();
 		tickHop();
-		// Pings and "updated Xs ago" change between downloads, so refresh the sidebar every ~10s too.
-		if (++panelTicks % 16 == 0)
+		// Pings and "updated Xs ago" change between downloads, so refresh the sidebar every ~3s too.
+		if (++panelTicks % 5 == 0)
 		{
 			pushPanel();
 		}
@@ -1153,7 +1150,7 @@ public class PlayerCountPlugin extends Plugin
 		{
 			return;
 		}
-		if (client.getWidget(InterfaceID.Worldswitcher.LIST) == null)
+		if (client.getWidget(InterfaceID.Worldswitcher.BUTTONS) == null)
 		{
 			client.openWorldHopper();
 			if (++hopAttempts >= MAX_HOP_ATTEMPTS)
