@@ -19,11 +19,15 @@ history.
   saved between sessions.
 - **Three frame styles**: the game's own steel interface border, RuneLite's standard box, or a dark
   panel.
+- **Vertical or horizontal layout**: a list, or a strip of labelled cells for the top or bottom of the
+  screen.
 - **Drag and resize**: hold Alt and drag to move it, or drag its corner to resize it. There's also a
   Size setting (50–300%).
 - **Auto-hide** in combat, in instances (boss rooms, raids, minigames), or until you hover over it.
 
 ![The three frame styles](docs/overlay-styles.png)
+
+![Horizontal layout in each frame style](docs/overlay-horizontal.png)
 
 ## World finder
 

@@ -35,7 +35,7 @@ final class FramePainter
 
 	/** The game's steel border pieces, trimmed of transparent padding. Null until loaded. */
 	private BufferedImage topLeft, topRight, bottomLeft, bottomRight;
-	private BufferedImage top, bottom, left, right, divider;
+	private BufferedImage top, bottom, left, right, divider, dividerV;
 
 	/**
 	 * Loads the steel sprites through the given lookup (sprite id to image, null if not ready).
@@ -54,7 +54,8 @@ final class FramePainter
 		BufferedImage t = sprites.apply(SpriteID.Steelborder2.EDGE_TOP);
 		BufferedImage r = sprites.apply(SpriteID.Steelborder2.EDGE_RIGHT);
 		BufferedImage d = sprites.apply(SpriteID.SteelborderDivider._0);
-		if (tl == null || tr == null || bl == null || br == null || t == null || r == null || d == null)
+		BufferedImage dv = sprites.apply(SpriteID.SteelborderDivider._1);
+		if (tl == null || tr == null || bl == null || br == null || t == null || r == null || d == null || dv == null)
 		{
 			return false;
 		}
@@ -64,6 +65,7 @@ final class FramePainter
 		bottom = flip(top, false);
 		left = flip(right, true);
 		divider = trim(d);
+		dividerV = trim(dv);
 		topRight = trim(tr);
 		bottomLeft = trim(bl);
 		bottomRight = trim(br);
@@ -184,6 +186,21 @@ final class FramePainter
 		{
 			g.setColor(withAlpha(DARK_TRIM, 160));
 			g.drawLine(x0 + 6, y + 2, x1 - 7, y + 2);
+		}
+	}
+
+	/** Upright divider between cells of the horizontal strip. */
+	void paintVerticalDivider(Graphics2D g, PlayerCountConfig.FrameStyle style, int x, int y0, int y1)
+	{
+		if (style == PlayerCountConfig.FrameStyle.STEEL && dividerV != null)
+		{
+			tileV(g, dividerV, y0, y1, x);
+		}
+		else
+		{
+			Color c = style == PlayerCountConfig.FrameStyle.DARK ? withAlpha(DARK_TRIM, 140) : new Color(255, 255, 255, 50);
+			g.setColor(c);
+			g.drawLine(x + 2, y0 + 5, x + 2, y1 - 6);
 		}
 	}
 

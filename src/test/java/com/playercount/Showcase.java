@@ -26,9 +26,7 @@ import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.laf.RuneLiteLAF;
 import net.runelite.client.ui.overlay.components.ComponentConstants;
-import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 import net.runelite.client.ui.overlay.components.PanelComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldRegion;
 import net.runelite.http.api.worlds.WorldResult;
@@ -62,23 +60,40 @@ public class Showcase
 		FramePainter painter = new FramePainter();
 		painter.loadSteel(id -> read(new File(spriteDir, id + "_0.png")));
 
-		// Overlay: all three styles, and the steel one with more lines and the graph
+		// Overlay: all three styles, the steel one with more lines and the graph, and both layouts
+		Instant graphEnd = Instant.parse("2026-11-11T23:00:00Z");
+		List<PopulationHistory.Point> series = fakeSeries(rnd);
 		List<BufferedImage> styles = new ArrayList<>();
 		for (PlayerCountConfig.FrameStyle style : PlayerCountConfig.FrameStyle.values())
 		{
-			styles.add(overlay(painter, style, basicLines(FramePainter.labelColor(style))));
+			styles.add(overlay(painter, style, PlayerCountConfig.Layout.VERTICAL, basicItems()));
 		}
 		ImageIO.write(onGrass(styles, 2), "png", new File(out, "overlay-styles.png"));
 
-		List<LayoutableRenderableEntity> full = basicLines(FramePainter.OSRS_ORANGE);
-		Color label = FramePainter.OSRS_ORANGE;
-		full.add(4, new RichLineComponent("Ping", label).add("34 ms", PlayerCountOverlay.UP));
-		full.add(new RichLineComponent("Wintertodt", label).add("W307 (812)", Color.WHITE));
-		full.add(new RichLineComponent("Today peak", label).add("126.4k at 20:14", Color.WHITE));
-		full.add(new RichLineComponent("Today low", label).add("88.1k at 07:52", Color.WHITE));
-		full.add(new GraphComponent(fakeSeries(rnd), Instant.parse("2026-11-11T23:00:00Z"), Duration.ofHours(1)));
-		BufferedImage steelFull = overlay(painter, PlayerCountConfig.FrameStyle.STEEL, full);
-		ImageIO.write(onGrass(Arrays.asList(steelFull), 2), "png", new File(out, "overlay-steel.png"));
+		List<OverlayLayout.Item> full = basicItems();
+		full.add(4, OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
+		full.add(OverlayLayout.Item.line("Wintertodt").add("W307 (812)", Color.WHITE));
+		full.add(OverlayLayout.Item.line("Today peak").add("126.4k at 20:14", Color.WHITE));
+		full.add(OverlayLayout.Item.line("Today low").add("88.1k at 07:52", Color.WHITE));
+		full.add(OverlayLayout.Item.graph(series, graphEnd, Duration.ofHours(1)));
+		ImageIO.write(onGrass(Arrays.asList(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, full)), 2),
+			"png", new File(out, "overlay-steel.png"));
+
+		List<OverlayLayout.Item> strip = basicItems();
+		strip.add(4, OverlayLayout.Item.line("Ping").add("34 ms", PlayerCountOverlay.UP));
+		List<BufferedImage> horizontal = new ArrayList<>();
+		for (PlayerCountConfig.FrameStyle style : PlayerCountConfig.FrameStyle.values())
+		{
+			horizontal.add(overlay(painter, style, PlayerCountConfig.Layout.HORIZONTAL, strip));
+		}
+		List<OverlayLayout.Item> stripGraph = new ArrayList<>(strip);
+		stripGraph.add(OverlayLayout.Item.graph(series, graphEnd, Duration.ofHours(1)));
+		horizontal.add(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.HORIZONTAL, stripGraph));
+		ImageIO.write(stacked(horizontal, 2), "png", new File(out, "overlay-horizontal.png"));
+		ImageIO.write(onGrass(Arrays.asList(
+			overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, strip),
+			overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.HORIZONTAL, strip)), 2),
+			"png", new File(out, "overlay-layouts.png"));
 
 		// Sidebar
 		WorldResult result = new WorldResult();
@@ -106,43 +121,32 @@ public class Showcase
 		System.exit(0);
 	}
 
-	private static List<LayoutableRenderableEntity> basicLines(Color label)
+	private static List<OverlayLayout.Item> basicItems()
 	{
-		List<LayoutableRenderableEntity> l = new ArrayList<>();
-		l.add(new RichLineComponent("World 302", label).add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
-		l.add(new RichLineComponent("Total", label).add("115,214", Color.WHITE).add(" (+158)", PlayerCountOverlay.UP));
-		l.add(new RichLineComponent("P2P / F2P", label).add("107.5k / 7.7k", Color.WHITE));
-		l.add(new RichLineComponent("Nearby", label).add("14", Color.WHITE));
-		l.add(new RichLineComponent("Quietest", label).add("W674 (121) SG", PlayerCountOverlay.UP));
+		List<OverlayLayout.Item> l = new ArrayList<>();
+		l.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
+		l.add(OverlayLayout.Item.line("Total").add("115,214", Color.WHITE).add(" (+158)", PlayerCountOverlay.UP));
+		l.add(OverlayLayout.Item.line("P2P / F2P").add("107.5k / 7.7k", Color.WHITE));
+		l.add(OverlayLayout.Item.line("Nearby").add("14", Color.WHITE));
+		l.add(OverlayLayout.Item.line("Quietest").add("W674 (121) SG", PlayerCountOverlay.UP));
 		return l;
 	}
 
-	private static BufferedImage overlay(FramePainter painter, PlayerCountConfig.FrameStyle style, List<LayoutableRenderableEntity> lines)
+	/** Same steps as the overlay: populate, measure, background, panel, border. */
+	private static BufferedImage overlay(FramePainter painter, PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout,
+		List<OverlayLayout.Item> items)
 	{
-		BufferedImage img = new BufferedImage(400, 400, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage img = new BufferedImage(1000, 500, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
 		g.setFont(FontManager.getRunescapeFont());
 		Rectangle insets = FramePainter.insets(style);
 		boolean custom = style != PlayerCountConfig.FrameStyle.RUNELITE;
 
 		PanelComponent panel = new PanelComponent();
+		int content = OverlayLayout.populate(panel, items, style, layout, true, painter, g);
 		panel.setBorder(insets);
 		panel.setBackgroundColor(custom ? null : ComponentConstants.STANDARD_BACKGROUND_COLOR);
-		panel.getChildren().add(TitleComponent.builder().text("Player Count").color(FramePainter.titleColor(style)).build());
-		if (custom)
-		{
-			panel.getChildren().add(new DividerComponent(painter, style, insets));
-		}
-		int content = g.getFontMetrics().stringWidth("Player Count");
-		for (LayoutableRenderableEntity l : lines)
-		{
-			if (l instanceof RichLineComponent)
-			{
-				content = Math.max(content, ((RichLineComponent) l).neededWidth(g.getFontMetrics(), 10));
-			}
-			panel.getChildren().add(l);
-		}
-		panel.setPreferredSize(new Dimension(Math.max(FramePainter.minWidth(style), content + insets.x + insets.width + 2), 0));
+		panel.setPreferredSize(new Dimension(Math.max(OverlayLayout.minWidth(style, layout), content + insets.x + insets.width + 2), 0));
 
 		Graphics2D probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics();
 		probe.setFont(g.getFont());
@@ -159,6 +163,30 @@ public class Showcase
 		}
 		g.dispose();
 		return img.getSubimage(0, 0, size.width, size.height);
+	}
+
+	private static BufferedImage stacked(List<BufferedImage> panels, int scale)
+	{
+		int w = 0;
+		int h = 16;
+		for (BufferedImage p : panels)
+		{
+			w = Math.max(w, p.getWidth());
+			h += p.getHeight() + 16;
+		}
+		BufferedImage canvas = new BufferedImage((w + 32) * scale, h * scale, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = canvas.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+		g.setColor(new Color(74, 90, 53));
+		g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+		int y = 16;
+		for (BufferedImage p : panels)
+		{
+			g.drawImage(p, 16 * scale, y * scale, p.getWidth() * scale, p.getHeight() * scale, null);
+			y += p.getHeight() + 16;
+		}
+		g.dispose();
+		return canvas;
 	}
 
 	private static BufferedImage onGrass(List<BufferedImage> panels, int scale)

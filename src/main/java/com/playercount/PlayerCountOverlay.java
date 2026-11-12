@@ -2,7 +2,6 @@ package com.playercount;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -11,6 +10,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import net.runelite.api.Client;
@@ -23,7 +24,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.ComponentConstants;
 import net.runelite.client.ui.overlay.components.PanelComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldRegion;
 
@@ -38,8 +38,6 @@ class PlayerCountOverlay extends Overlay
 	static final Color AMBER = new Color(0xFF, 0xD0, 0x40);
 	private static final Color MUTED = new Color(0xAA, 0xAA, 0xAA);
 	private static final Color HIDDEN_HINT = new Color(255, 255, 255, 40);
-	/** Space between a line's label and its value. */
-	private static final int GAP = 10;
 	private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
 
 	private final PlayerCountPlugin plugin;
@@ -51,15 +49,15 @@ class PlayerCountOverlay extends Overlay
 	private final FramePainter painter = new FramePainter();
 	private final PanelComponent panelComponent = new PanelComponent();
 
-	// Per-frame layout state
-	private FontMetrics metrics;
-	private int contentWidth;
-	private PlayerCountConfig.FrameStyle style = PlayerCountConfig.FrameStyle.RUNELITE;
-	private Color labelColor = Color.WHITE;
 	/** Unscaled size last frame; PanelComponent itself sizes from the previous frame too. */
 	private Dimension lastNatural;
 	/** Size on screen last frame, kept while hidden-until-hover so the hover area stays put. */
 	private Dimension lastScaled;
+	/**
+	 * A preferred size already saved when the overlay first draws isn't a drag from this session
+	 * (older builds saved one), so it's discarded rather than turned into a Size.
+	 */
+	private boolean firstFrame = true;
 
 	@Inject
 	PlayerCountOverlay(PlayerCountPlugin plugin, PlayerCountConfig config, Client client, SpriteManager spriteManager,
@@ -98,20 +96,18 @@ class PlayerCountOverlay extends Overlay
 			return lastScaled;
 		}
 
-		metrics = graphics.getFontMetrics();
-		contentWidth = 0;
-		style = config.frameStyle();
+		PlayerCountConfig.FrameStyle style = config.frameStyle();
 		if (style == PlayerCountConfig.FrameStyle.STEEL && !painter.loadSteel(id -> spriteManager.getSprite(id, 0)))
 		{
 			style = PlayerCountConfig.FrameStyle.RUNELITE; // sprites not loaded yet
 		}
-		labelColor = FramePainter.labelColor(style);
-		panelComponent.getChildren().clear();
+		PlayerCountConfig.Layout layout = config.layout();
 
-		buildLines();
+		panelComponent.getChildren().clear();
+		int content = OverlayLayout.populate(panelComponent, items(), style, layout, config.showTitle(), painter, graphics);
 
 		Rectangle insets = FramePainter.insets(style);
-		int naturalWidth = Math.max(FramePainter.minWidth(style), contentWidth + insets.x + insets.width + 2);
+		int naturalWidth = Math.max(OverlayLayout.minWidth(style, layout), content + insets.x + insets.width + 2);
 		double scale = scale(naturalWidth);
 
 		panelComponent.setPreferredSize(new Dimension(naturalWidth, 0));
@@ -165,15 +161,20 @@ class PlayerCountOverlay extends Overlay
 		if (dragged != null)
 		{
 			setPreferredSize(null);
-			int pct = (int) Math.round(dragged.width * 100.0 / naturalWidth);
-			pct = Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, pct));
-			if (pct != config.overlayScale())
-			{
-				configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SCALE_KEY, pct);
-			}
 			overlayManager.saveOverlay(this);
-			return pct / 100.0;
+			if (!firstFrame && dragged.width > 0)
+			{
+				int pct = (int) Math.round(dragged.width * 100.0 / naturalWidth);
+				pct = Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, pct));
+				if (pct != config.overlayScale())
+				{
+					configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SCALE_KEY, pct);
+				}
+				firstFrame = false;
+				return pct / 100.0;
+			}
 		}
+		firstFrame = false;
 		return Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, config.overlayScale())) / 100.0;
 	}
 
@@ -184,23 +185,14 @@ class PlayerCountOverlay extends Overlay
 		return mouse != null && bounds != null && bounds.contains(mouse.getX(), mouse.getY());
 	}
 
-	private void buildLines()
+	/** The overlay's lines, in order. Layout (vertical or horizontal) is applied by {@link OverlayLayout}. */
+	private List<OverlayLayout.Item> items()
 	{
-		if (config.showTitle())
-		{
-			String title = "Player Count";
-			contentWidth = metrics.stringWidth(title);
-			panelComponent.getChildren().add(TitleComponent.builder().text(title).color(FramePainter.titleColor(style)).build());
-			if (style != PlayerCountConfig.FrameStyle.RUNELITE)
-			{
-				panelComponent.getChildren().add(new DividerComponent(painter, style, FramePainter.insets(style)));
-			}
-		}
-
+		List<OverlayLayout.Item> items = new ArrayList<>();
 		if (!plugin.hasData())
 		{
-			line("Loading worlds...", "", Color.WHITE);
-			return;
+			items.add(OverlayLayout.Item.line("Loading worlds..."));
+			return items;
 		}
 
 		if (config.showCurrentWorld())
@@ -208,48 +200,48 @@ class PlayerCountOverlay extends Overlay
 			int players = plugin.currentWorldPlayers();
 			Color color = players > config.busyThreshold() ? DOWN : Color.WHITE;
 			String count = players < 0 ? "?" : String.format("%,d", players);
-			changeLine("World " + plugin.currentWorld(), count, color, plugin.currentWorldChange());
+			items.add(change(OverlayLayout.Item.line("World " + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange()));
 		}
 
 		WorldStats.Totals totals = plugin.getTotals();
 		if (config.showTotal() && totals != null)
 		{
-			changeLine("Total", String.format("%,d", totals.getTotal()), Color.WHITE, plugin.totalChange());
+			items.add(change(OverlayLayout.Item.line("Total").add(String.format("%,d", totals.getTotal()), Color.WHITE), Color.WHITE, plugin.totalChange()));
 		}
 
 		if (config.showMembersSplit() && totals != null)
 		{
-			line("P2P / F2P", compact(totals.getMembers()) + " / " + compact(totals.getFree()), Color.WHITE);
+			items.add(OverlayLayout.Item.line("P2P / F2P").add(compact(totals.getMembers()) + " / " + compact(totals.getFree()), Color.WHITE));
 		}
 
 		if (config.showRegions())
 		{
 			for (Map.Entry<WorldRegion, Integer> e : plugin.regionTotals().entrySet())
 			{
-				line("  " + WorldStats.regionCode(e.getKey()), compact(e.getValue()), Color.WHITE);
+				items.add(OverlayLayout.Item.line("  " + WorldStats.regionCode(e.getKey())).add(compact(e.getValue()), Color.WHITE));
 			}
 		}
 
 		if (config.showPing() && config.pingEnabled())
 		{
 			int ping = plugin.currentPing();
-			line("Ping", ping < 0 ? "..." : ping + " ms", pingColor(ping));
+			items.add(OverlayLayout.Item.line("Ping").add(ping < 0 ? "..." : ping + " ms", pingColor(ping)));
 		}
 
 		if (config.showNearby() && plugin.getNearby() >= 0)
 		{
-			line("Nearby", Integer.toString(plugin.getNearby()), Color.WHITE);
+			items.add(OverlayLayout.Item.line("Nearby").add(Integer.toString(plugin.getNearby()), Color.WHITE));
 		}
 
 		if (config.showSocial())
 		{
 			if (plugin.getFriendsHere() >= 0)
 			{
-				line("Friends here", Integer.toString(plugin.getFriendsHere()), Color.WHITE);
+				items.add(OverlayLayout.Item.line("Friends here").add(Integer.toString(plugin.getFriendsHere()), Color.WHITE));
 			}
 			if (plugin.getClanHere() >= 0)
 			{
-				line("Clan here", Integer.toString(plugin.getClanHere()), Color.WHITE);
+				items.add(OverlayLayout.Item.line("Clan here").add(Integer.toString(plugin.getClanHere()), Color.WHITE));
 			}
 		}
 
@@ -257,20 +249,15 @@ class PlayerCountOverlay extends Overlay
 		{
 			World s = plugin.getSuggestion();
 			String label = config.finderMode().toString();
-			if (s == null)
-			{
-				line(label, "none", MUTED);
-			}
-			else
-			{
-				line(label, worldText(s, true), UP);
-			}
+			items.add(s == null
+				? OverlayLayout.Item.line(label).add("none", MUTED)
+				: OverlayLayout.Item.line(label).add(worldText(s, true), UP));
 		}
 
 		for (Map.Entry<String, World> e : plugin.activityWorlds().entrySet())
 		{
 			World w = e.getValue();
-			line(e.getKey(), w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE);
+			items.add(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE));
 		}
 
 		if (config.showRecords())
@@ -278,8 +265,8 @@ class PlayerCountOverlay extends Overlay
 			DailyRecords r = plugin.getRecords();
 			if (r.hasData(Instant.now()))
 			{
-				line("Today peak", compact(r.getPeak()) + " at " + CLOCK.format(r.getPeakAt()), Color.WHITE);
-				line("Today low", compact(r.getLow()) + " at " + CLOCK.format(r.getLowAt()), Color.WHITE);
+				items.add(OverlayLayout.Item.line("Today peak").add(compact(r.getPeak()) + " at " + CLOCK.format(r.getPeakAt()), Color.WHITE));
+				items.add(OverlayLayout.Item.line("Today low").add(compact(r.getLow()) + " at " + CLOCK.format(r.getLowAt()), Color.WHITE));
 			}
 		}
 
@@ -287,7 +274,7 @@ class PlayerCountOverlay extends Overlay
 		if (config.showUpdated() && updated != null)
 		{
 			long secs = Duration.between(updated, Instant.now()).getSeconds();
-			line("Updated", secs < 60 ? secs + "s ago" : (secs / 60) + "m ago", MUTED);
+			items.add(OverlayLayout.Item.line("Updated").add(secs < 60 ? secs + "s ago" : (secs / 60) + "m ago", MUTED));
 		}
 
 		if (config.showGraph())
@@ -295,31 +282,20 @@ class PlayerCountOverlay extends Overlay
 			Duration window = Duration.ofHours(Math.max(1, config.graphHours()));
 			int world = config.graphSeries() == PlayerCountConfig.GraphSeries.CURRENT_WORLD ? plugin.currentWorld() : -1;
 			Instant now = Instant.now();
-			panelComponent.getChildren().add(new GraphComponent(plugin.getHistory().series(now, window, world), now, window));
+			items.add(OverlayLayout.Item.graph(plugin.getHistory().series(now, window, world), now, window));
 		}
+		return items;
 	}
 
-	private void add(RichLineComponent c)
+	/** Appends the +/- in green/red (or the value's colour if colouring is off). */
+	private OverlayLayout.Item change(OverlayLayout.Item item, Color valueColor, Integer change)
 	{
-		contentWidth = Math.max(contentWidth, c.neededWidth(metrics, GAP));
-		panelComponent.getChildren().add(c);
-	}
-
-	private void line(String left, String right, Color rightColor)
-	{
-		add(new RichLineComponent(left, labelColor).add(right, rightColor));
-	}
-
-	/** A count followed by its +/- in green/red (or the count's colour if colouring is off). */
-	private void changeLine(String left, String value, Color valueColor, Integer change)
-	{
-		RichLineComponent c = new RichLineComponent(left, labelColor).add(value, valueColor);
 		if (config.showChange() && change != null && change != 0)
 		{
 			Color color = !config.colorChanges() ? valueColor : change > 0 ? UP : DOWN;
-			c.add(String.format(" (%+,d)", change), color);
+			item.add(String.format(" (%+,d)", change), color);
 		}
-		add(c);
+		return item;
 	}
 
 	private String worldText(World w, boolean withRegion)

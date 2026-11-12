@@ -20,7 +20,7 @@ import net.runelite.client.ui.overlay.components.TextComponent;
 /** Small line graph of player counts over a time window. */
 class GraphComponent implements LayoutableRenderableEntity
 {
-	private static final int HEIGHT = 44;
+	private static final int DEFAULT_HEIGHT = 44;
 	private static final Color GRID = new Color(255, 255, 255, 40);
 	private static final Color LINE = new Color(0xFF, 0xB0, 0x40);
 	private static final Color LABEL = new Color(0xAA, 0xAA, 0xAA);
@@ -28,6 +28,8 @@ class GraphComponent implements LayoutableRenderableEntity
 	private final List<PopulationHistory.Point> points;
 	private final Instant now;
 	private final Duration window;
+	private final int height;
+	private final boolean labels;
 
 	private final Rectangle bounds = new Rectangle();
 	private Point preferredLocation = new Point();
@@ -35,28 +37,39 @@ class GraphComponent implements LayoutableRenderableEntity
 
 	GraphComponent(List<PopulationHistory.Point> points, Instant now, Duration window)
 	{
+		this(points, now, window, DEFAULT_HEIGHT, true);
+	}
+
+	/** @param labels false for a compact graph with no range/time labels (used in the horizontal strip) */
+	GraphComponent(List<PopulationHistory.Point> points, Instant now, Duration window, int height, boolean labels)
+	{
 		this.points = points;
 		this.now = now;
 		this.window = window;
+		this.height = height;
+		this.labels = labels;
 	}
 
 	@Override
 	public Dimension render(Graphics2D g)
 	{
 		int x0 = preferredLocation.x;
-		int y0 = preferredLocation.y + 2;
+		int y0 = preferredLocation.y + (labels ? 2 : 0);
 		int w = preferredSize.width;
 		FontMetrics fm = g.getFontMetrics();
-		int labelH = fm.getHeight();
+		int labelH = labels ? fm.getHeight() : 0;
 		int plotTop = y0 + labelH;
-		int plotH = HEIGHT - labelH;
+		int plotH = height - labelH - (labels ? 0 : 1);
 
 		g.setColor(GRID);
 		g.drawRect(x0, plotTop, w - 1, plotH);
 
 		if (points.size() < 2)
 		{
-			label(g, "Graph: collecting data...", x0, y0 + labelH - 2);
+			if (labels)
+			{
+				label(g, "Graph: collecting data...", x0, y0 + labelH - 2);
+			}
 		}
 		else
 		{
@@ -98,6 +111,10 @@ class GraphComponent implements LayoutableRenderableEntity
 			g.setStroke(stroke);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
 
+			if (!labels)
+			{
+				return finish(w);
+			}
 			String hi = PlayerCountOverlay.compact(max);
 			String lo = PlayerCountOverlay.compact(min);
 			label(g, lo + " - " + hi, x0, y0 + labelH - 2);
@@ -105,7 +122,12 @@ class GraphComponent implements LayoutableRenderableEntity
 			label(g, span, x0 + w - fm.stringWidth(span), y0 + labelH - 2);
 		}
 
-		Dimension size = new Dimension(w, HEIGHT + 4);
+		return finish(w);
+	}
+
+	private Dimension finish(int w)
+	{
+		Dimension size = new Dimension(w, labels ? height + 4 : height);
 		bounds.setLocation(preferredLocation);
 		bounds.setSize(size);
 		return size;

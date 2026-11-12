@@ -19,7 +19,8 @@ public interface PlayerCountConfig extends Config
 	// RuneLite saves defaults on first load, so a new default needs a new key name.
 	String REFRESH_KEY = "updateInterval";
 	String SIDEBAR_KEY = "showSidebar";
-	String SCALE_KEY = "overlayScale";
+	// Renamed from overlayScale: an early build could save a wrong size there.
+	String SCALE_KEY = "overlaySize";
 	String FAVORITES_KEY = "favoriteWorlds";
 	int MIN_SCALE = 50;
 	int MAX_SCALE = 300;
@@ -70,6 +71,12 @@ public interface PlayerCountConfig extends Config
 	default int overlayScale()
 	{
 		return 100;
+	}
+
+	@ConfigItem(keyName = "layout", name = "Layout", description = "Vertical list, or a horizontal strip", section = lookSection, position = 3)
+	default Layout layout()
+	{
+		return Layout.VERTICAL;
 	}
 
 	@ConfigItem(keyName = "hideMode", name = "Auto-hide", description = "Hide the overlay in combat, or until you hover over it", section = lookSection, position = 3)
@@ -327,6 +334,25 @@ public interface PlayerCountConfig extends Config
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum Layout
+	{
+		VERTICAL("Vertical"),
+		HORIZONTAL("Horizontal");
+
+		private final String label;
+
+		Layout(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum HideMode
