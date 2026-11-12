@@ -498,7 +498,7 @@ class WorldListPanel extends PluginPanel
 		{
 			worldTitle.setText("World " + current.getId());
 			String hereRisk = s.isWarnRisky() ? WorldStats.risk(current) : null;
-			worldTitle.setForeground(hereRisk == null ? Color.WHITE : WorldStats.deadly(current) ? OverlayLayout.RISK : OverlayLayout.CAUTION);
+			worldTitle.setForeground(hereRisk == null ? Color.WHITE : WorldStats.pvpThemed(current) ? OverlayLayout.RISK : OverlayLayout.CAUTION);
 			if (hereRisk != null)
 			{
 				worldTitle.setText("World " + current.getId() + "  " + hereRisk);
@@ -531,7 +531,7 @@ class WorldListPanel extends PluginPanel
 			World sug = s.getSuggestion();
 			String risk = sug != null && s.isWarnRisky() ? WorldStats.risk(sug) : null;
 			hopButton.setText(sug == null ? "No match" : "Hop W" + sug.getId() + (risk != null ? " " + risk + "!" : " (" + sug.getPlayers() + ")"));
-			Color riskColor = risk == null ? null : WorldStats.deadly(sug) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+			Color riskColor = risk == null ? null : WorldStats.pvpThemed(sug) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
 			hopButton.setForeground(riskColor != null ? riskColor : Color.WHITE);
 			hopButton.setBorder(BorderFactory.createCompoundBorder(
 				BorderFactory.createLineBorder(riskColor != null ? riskColor : ColorScheme.MEDIUM_GRAY_COLOR, risk != null ? 2 : 1),
@@ -799,7 +799,7 @@ class WorldListPanel extends PluginPanel
 			}
 			if (s != null && s.isWarnRisky() && WorldStats.risk(world) != null)
 			{
-				if (WorldStats.deadly(world))
+				if (WorldStats.pvpThemed(world))
 				{
 					// Attackable almost anywhere: red tint and outline
 					g.setColor(new Color(255, 40, 30, 40));
@@ -825,7 +825,7 @@ class WorldListPanel extends PluginPanel
 			String risk = WorldStats.risk(world);
 			Color nameColor = current ? ColorScheme.BRAND_ORANGE
 				: risk == null ? Color.WHITE
-				: WorldStats.deadly(world) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
+				: WorldStats.pvpThemed(world) ? OverlayLayout.RISK : OverlayLayout.CAUTION;
 			g.setColor(nameColor);
 			String name = "W" + world.getId();
 			g.drawString(name, STAR_AREA, 15);

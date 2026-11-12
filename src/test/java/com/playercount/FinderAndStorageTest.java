@@ -115,9 +115,11 @@ public class FinderAndStorageTest
 		assertEquals("PvP", WorldStats.risk(pvp));
 		assertEquals("LMS", WorldStats.risk(worlds.get(5))); // PvP-themed: orange, not deadly
 		assertTrue(!WorldStats.deadly(worlds.get(5)));
+		assertTrue(WorldStats.pvpThemed(worlds.get(5))); // LMS pulses red
 		World wildy = themed(369, 699, "Wilderness PK - Members");
 		assertEquals("Wildy PK", WorldStats.risk(wildy));
 		assertTrue(!WorldStats.deadly(wildy)); // only the Wilderness is dangerous
+		assertTrue(WorldStats.pvpThemed(wildy));
 		assertTrue(WorldStats.deadly(pvp));
 		assertTrue(WorldTheme.WILDERNESS_PK.matches(wildy));
 		assertTrue(!WorldTheme.PVP.matches(wildy));
@@ -175,6 +177,9 @@ public class FinderAndStorageTest
 		World arena = themed(348, 300, "PvP Arena (Legacy Duels)");
 		assertEquals("PvP Arena", WorldStats.risk(arena)); // PvP-themed: orange
 		assertTrue(!WorldStats.deadly(arena));
+		assertTrue(WorldStats.pvpThemed(arena));
+		World leagues = themed(400, 900, "Leagues", WorldType.SEASONAL);
+		assertTrue(!WorldStats.pvpThemed(leagues)); // separate account: orange
 	}
 
 	@Test

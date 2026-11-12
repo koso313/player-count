@@ -407,7 +407,7 @@ class PlayerCountOverlay extends Overlay
 			{
 				int ping = config.pingEnabled() ? plugin.pingOf(s.getId()) : -1;
 				String risk = config.warnRisky() ? WorldStats.risk(s) : null;
-				boolean deadly = risk != null && WorldStats.deadly(s);
+				boolean deadly = risk != null && WorldStats.pvpThemed(s);
 				Color worldColor = risk == null ? UP : deadly ? OverlayLayout.RISK : OverlayLayout.CAUTION;
 				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), worldColor)
 					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping))
@@ -490,7 +490,7 @@ class PlayerCountOverlay extends Overlay
 		{
 			return item;
 		}
-		boolean deadly = WorldStats.deadly(w);
+		boolean deadly = WorldStats.pvpThemed(w);
 		Color c = deadly ? OverlayLayout.RISK : OverlayLayout.CAUTION;
 		if (tag)
 		{

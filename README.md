@@ -55,12 +55,11 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
   Trade, Nex, ToA, Soul Wars, House party, each skill-total level and every other themed world) and the finder rotates through
   every world running it, busiest first, lowest ping first, or both. The sidebar has the same Theme
   filter. Themed is the only mode that can
-  suggest PvP, high-risk, Bounty Hunter, Deadman, Leagues, beta, speedrun or fresh-start worlds. PvP and
-  Deadman worlds, where you can be attacked almost anywhere, **pulse red** in the overlay and
-  sidebar. Other PvP-themed worlds (High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena) and
-  separate-account worlds show in **orange with an orange underline**. That applies wherever a world
-  appears: the world you're on, the suggestion, activity worlds and the sidebar. Chat warns you as you
-  hop. You can turn the warnings off.
+  suggest PvP, high-risk, Bounty Hunter, Deadman, Leagues, beta, speedrun or fresh-start worlds. Every
+  PvP-themed world (PvP, Deadman, High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena) **pulses
+  red** wherever it appears: the world you're on, the suggestion and the sidebar. Separate-account
+  worlds (Leagues, beta, speedrun, fresh start) show in **orange with an orange underline**. Chat warns
+  you as you hop. You can turn the warnings off.
 
   ![Risky world warning](docs/overlay-warning.png)
 - **Favourites**: the first theme. List worlds in the settings (`302, 330, 420`) or star them in the

@@ -1155,6 +1155,8 @@ public class PlayerCountPlugin extends Plugin
 		{
 			chat(WorldStats.deadly(target)
 				? String.format("<col=ff4030>Careful: world %d is a %s world - you can be attacked almost anywhere.</col>", target.getId(), risk)
+				: WorldStats.pvpThemed(target)
+				? String.format("<col=ff4030>Careful: world %d is a %s world.</col>", target.getId(), risk)
 				: String.format("<col=ff8c1a>Heads up: world %d is a %s world.</col>", target.getId(), risk));
 		}
 		chat(String.format("Hopping to world %d (%,d players).", target.getId(), target.getPlayers()));

@@ -374,7 +374,20 @@ final class WorldStats
 		return null;
 	}
 
-	/** PvP and Deadman worlds: you can be attacked almost anywhere (these get the pulsing warning). */
+	/**
+	 * PvP-themed worlds (PvP, Deadman, High Risk, Bounty Hunter, Wilderness PK, LMS, PvP Arena): these get the
+	 * pulsing red warning. Separate-account worlds (Leagues, beta, speedrun, fresh start) are orange instead.
+	 */
+	static boolean pvpThemed(World w)
+	{
+		String r = risk(w);
+		return r != null && !SEPARATE_ACCOUNT.contains(r);
+	}
+
+	private static final java.util.Set<String> SEPARATE_ACCOUNT = new java.util.HashSet<>(java.util.Arrays.asList(
+		"Leagues", "Beta", "Speedrun", "Fresh start", "Tournament"));
+
+	/** PvP and Deadman worlds: you can be attacked almost anywhere (stronger chat warning). */
 	static boolean deadly(World w)
 	{
 		return w.getTypes().contains(WorldType.PVP) || w.getTypes().contains(WorldType.DEADMAN);
