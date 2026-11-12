@@ -76,6 +76,24 @@ final class FramePainter
 	/** Padding between the panel edge and its text, per style. x/y = left/top, width/height = right/bottom. */
 	static Rectangle insets(PlayerCountConfig.FrameStyle style)
 	{
+		return insets(style, false);
+	}
+
+	/** Compact trims the padding inside the frame; the steel edges themselves stay at their native 6px. */
+	static Rectangle insets(PlayerCountConfig.FrameStyle style, boolean compact)
+	{
+		if (compact)
+		{
+			switch (style)
+			{
+				case STEEL:
+					return new Rectangle(STEEL_EDGE + 3, STEEL_EDGE + 2, STEEL_EDGE + 3, STEEL_EDGE + 3);
+				case DARK:
+					return new Rectangle(5, 4, 5, 5);
+				default:
+					return new Rectangle(3, 3, 3, 3);
+			}
+		}
 		switch (style)
 		{
 			case STEEL:

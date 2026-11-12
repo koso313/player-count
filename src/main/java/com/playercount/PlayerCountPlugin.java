@@ -59,6 +59,8 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.WorldsFetch;
 import net.runelite.client.game.WorldService;
 import net.runelite.client.input.KeyManager;
+import net.runelite.client.input.MouseAdapter;
+import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -140,6 +142,19 @@ public class PlayerCountPlugin extends Plugin
 
 	@Inject
 	private ClientToolbar clientToolbar;
+
+	@Inject
+	private MouseManager mouseManager;
+
+	/** Left-clicks on the overlay's world lines hop there. */
+	private final MouseAdapter overlayClicks = new MouseAdapter()
+	{
+		@Override
+		public java.awt.event.MouseEvent mousePressed(java.awt.event.MouseEvent e)
+		{
+			return overlay.handleClick(e);
+		}
+	};
 
 	@Value
 	private static class Sample
@@ -235,6 +250,7 @@ public class PlayerCountPlugin extends Plugin
 		overlayManager.add(overlay);
 		keyManager.registerKeyListener(hopHotkey);
 		keyManager.registerKeyListener(nextHotkey);
+		mouseManager.registerMouseListener(overlayClicks);
 		panel = new WorldListPanel(new WorldListPanel.Actions()
 		{
 			@Override
@@ -312,6 +328,7 @@ public class PlayerCountPlugin extends Plugin
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(hopHotkey);
 		keyManager.unregisterKeyListener(nextHotkey);
+		mouseManager.unregisterMouseListener(overlayClicks);
 		pingService.stop();
 		if (saveTask != null)
 		{

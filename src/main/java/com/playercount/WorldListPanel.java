@@ -830,6 +830,13 @@ class WorldListPanel extends PluginPanel
 		return end <= 0 ? "" : s.substring(0, end) + dots;
 	}
 
+	/** For screenshots: show row {@code index} as hovered (with its Hop button). */
+	void previewHover(int index)
+	{
+		hoverIndex = index;
+		list.repaint();
+	}
+
 	/** For tests and screenshots: the rows currently shown. */
 	List<World> visibleWorlds()
 	{

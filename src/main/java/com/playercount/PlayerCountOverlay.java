@@ -2,9 +2,11 @@ package com.playercount;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,13 +19,17 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Point;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.ComponentConstants;
 import net.runelite.client.ui.overlay.components.PanelComponent;
+import net.runelite.client.ui.overlay.tooltip.Tooltip;
+import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldRegion;
 
@@ -46,6 +52,8 @@ class PlayerCountOverlay extends Overlay
 	private final SpriteManager spriteManager;
 	private final ConfigManager configManager;
 	private final OverlayManager overlayManager;
+	private final ClientThread clientThread;
+	private final TooltipManager tooltipManager;
 	private final FramePainter painter = new FramePainter();
 	private final PanelComponent panelComponent = new PanelComponent();
 
@@ -58,12 +66,19 @@ class PlayerCountOverlay extends Overlay
 	 * (older builds saved one), so it's discarded rather than turned into a Size.
 	 */
 	private boolean firstFrame = true;
+	/** Lines drawn last frame (with their hit boxes) and the scale used, for clicks and hover. */
+	private List<OverlayLayout.Item> lastItems = new ArrayList<>();
+	private double lastScale = 1;
+	/** Mini size this frame: short labels and compact numbers. */
+	private boolean mini;
 
 	@Inject
 	PlayerCountOverlay(PlayerCountPlugin plugin, PlayerCountConfig config, Client client, SpriteManager spriteManager,
-		ConfigManager configManager, OverlayManager overlayManager)
+		ConfigManager configManager, OverlayManager overlayManager, ClientThread clientThread, TooltipManager tooltipManager)
 	{
 		super(plugin);
+		this.clientThread = clientThread;
+		this.tooltipManager = tooltipManager;
 		this.plugin = plugin;
 		this.config = config;
 		this.client = client;
@@ -86,6 +101,7 @@ class PlayerCountOverlay extends Overlay
 	{
 		if (plugin.hiddenBySituation())
 		{
+			lastItems = new ArrayList<>();
 			return null;
 		}
 		if (config.hideMode() == PlayerCountConfig.HideMode.UNTIL_HOVER && !hovered() && lastScaled != null)
@@ -103,11 +119,24 @@ class PlayerCountOverlay extends Overlay
 		}
 		PlayerCountConfig.Layout layout = config.layout();
 
-		panelComponent.getChildren().clear();
-		int content = OverlayLayout.populate(panelComponent, items(), style, layout, config.showTitle(), painter, graphics);
+		// Never shrink: pixel fonts and sprites smear when scaled down. Small sizes use the compact layout
+		// (the game's small font, native size) instead, sizes near 100% snap to native, larger ones scale up.
+		boolean compact = clampedSize() < PlayerCountConfig.COMPACT_BELOW;
+		mini = clampedSize() < PlayerCountConfig.MINI_BELOW;
+		Font font = graphics.getFont();
+		if (compact)
+		{
+			graphics.setFont(FontManager.getRunescapeSmallFont());
+		}
 
-		Rectangle insets = FramePainter.insets(style);
-		int naturalWidth = Math.max(OverlayLayout.minWidth(style, layout), content + insets.x + insets.width + 2);
+		List<OverlayLayout.Item> items = items();
+		markHover(items);
+
+		panelComponent.getChildren().clear();
+		int content = OverlayLayout.populate(panelComponent, items, style, layout, config.showTitle(), painter, graphics, compact, mini);
+
+		Rectangle insets = FramePainter.insets(style, compact);
+		int naturalWidth = Math.max(OverlayLayout.minWidth(style, layout, compact), content + insets.x + insets.width + 2);
 		double scale = scale(naturalWidth);
 
 		panelComponent.setPreferredSize(new Dimension(naturalWidth, 0));
@@ -140,9 +169,12 @@ class PlayerCountOverlay extends Overlay
 				graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, interpolation);
 			}
 			panelComponent.getChildren().clear();
+			graphics.setFont(font);
 		}
 
 		lastNatural = natural;
+		lastItems = items;
+		lastScale = scale;
 		if (natural == null)
 		{
 			return null;
@@ -171,11 +203,85 @@ class PlayerCountOverlay extends Overlay
 					configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.SCALE_KEY, pct);
 				}
 				firstFrame = false;
-				return pct / 100.0;
+				return transformFor(pct);
 			}
 		}
 		firstFrame = false;
-		return Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, config.overlayScale())) / 100.0;
+		return transformFor(clampedSize());
+	}
+
+	private int clampedSize()
+	{
+		return Math.max(PlayerCountConfig.MIN_SCALE, Math.min(PlayerCountConfig.MAX_SCALE, config.overlayScale()));
+	}
+
+	/** How much to scale the drawing for a Size: never below 1 (compact handles small sizes), native up to 110%. */
+	static double transformFor(int pct)
+	{
+		return pct <= 110 ? 1.0 : pct / 100.0;
+	}
+
+	/** Underlines the clickable line under the mouse (using last frame's positions) and shows a tooltip. */
+	private void markHover(List<OverlayLayout.Item> items)
+	{
+		Point mouse = client.getMouseCanvasPosition();
+		if (mouse == null)
+		{
+			return;
+		}
+		OverlayLayout.Item over = itemAt(mouse.getX(), mouse.getY());
+		if (over == null)
+		{
+			return;
+		}
+		for (OverlayLayout.Item item : items)
+		{
+			if (item.target != null && item.label.equals(over.label))
+			{
+				item.hovered = true;
+				tooltipManager.add(new Tooltip("Click to hop to world " + item.target.getId()));
+			}
+		}
+	}
+
+	/** The clickable line drawn last frame at this canvas position, or null. */
+	private OverlayLayout.Item itemAt(int x, int y)
+	{
+		Rectangle b = getBounds();
+		if (b == null || !b.contains(x, y))
+		{
+			return null;
+		}
+		double localX = (x - b.x) / lastScale;
+		double localY = (y - b.y) / lastScale;
+		for (OverlayLayout.Item item : lastItems)
+		{
+			if (item.target != null && item.hitBox.contains(localX, localY))
+			{
+				return item;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Left-click on a world line hops there. Alt is left alone (that's RuneLite's move/resize),
+	 * and the click is consumed so the game doesn't also walk there.
+	 */
+	MouseEvent handleClick(MouseEvent e)
+	{
+		if (e.getButton() != MouseEvent.BUTTON1 || e.isAltDown())
+		{
+			return e;
+		}
+		OverlayLayout.Item item = itemAt(e.getX(), e.getY());
+		if (item != null)
+		{
+			World target = item.target;
+			e.consume();
+			clientThread.invoke(() -> plugin.hopTo(target));
+		}
+		return e;
 	}
 
 	private boolean hovered()
@@ -200,18 +306,19 @@ class PlayerCountOverlay extends Overlay
 			int players = plugin.currentWorldPlayers();
 			Color color = players > config.busyThreshold() ? DOWN : Color.WHITE;
 			String count = players < 0 ? "?" : String.format("%,d", players);
-			items.add(change(OverlayLayout.Item.line("World " + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange()));
+			items.add(change(OverlayLayout.Item.line((mini ? "W" : "World ") + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange()));
 		}
 
 		WorldStats.Totals totals = plugin.getTotals();
 		if (config.showTotal() && totals != null)
 		{
-			items.add(change(OverlayLayout.Item.line("Total").add(String.format("%,d", totals.getTotal()), Color.WHITE), Color.WHITE, plugin.totalChange()));
+			String total = mini ? compact(totals.getTotal()) : String.format("%,d", totals.getTotal());
+			items.add(change(OverlayLayout.Item.line(mini ? "OSRS" : "Total").add(total, Color.WHITE), Color.WHITE, mini ? null : plugin.totalChange()));
 		}
 
 		if (config.showMembersSplit() && totals != null)
 		{
-			items.add(OverlayLayout.Item.line("P2P / F2P").add(compact(totals.getMembers()) + " / " + compact(totals.getFree()), Color.WHITE));
+			items.add(OverlayLayout.Item.line(mini ? "P2P" : "P2P / F2P").add(compact(totals.getMembers()) + " / " + compact(totals.getFree()), Color.WHITE));
 		}
 
 		if (config.showRegions())
@@ -225,12 +332,12 @@ class PlayerCountOverlay extends Overlay
 		if (config.showPing() && config.pingEnabled())
 		{
 			int ping = plugin.currentPing();
-			items.add(OverlayLayout.Item.line("Ping").add(ping < 0 ? "..." : ping + " ms", pingColor(ping)));
+			items.add(OverlayLayout.Item.line("Ping").add(ping < 0 ? "..." : ping + (mini ? "" : " ms"), pingColor(ping)));
 		}
 
 		if (config.showNearby() && plugin.getNearby() >= 0)
 		{
-			items.add(OverlayLayout.Item.line("Nearby").add(Integer.toString(plugin.getNearby()), Color.WHITE));
+			items.add(OverlayLayout.Item.line(mini ? "Near" : "Nearby").add(Integer.toString(plugin.getNearby()), Color.WHITE));
 		}
 
 		if (config.showSocial())
@@ -248,7 +355,7 @@ class PlayerCountOverlay extends Overlay
 		if (config.showSuggestion() && config.finderMode() != PlayerCountConfig.FinderMode.OFF)
 		{
 			World s = plugin.getSuggestion();
-			String label = config.finderMode().toString();
+			String label = mini ? shortFinder() : config.finderMode().toString();
 			if (s == null)
 			{
 				items.add(OverlayLayout.Item.line(label).add("none", MUTED));
@@ -256,15 +363,15 @@ class PlayerCountOverlay extends Overlay
 			else
 			{
 				int ping = config.pingEnabled() ? plugin.pingOf(s.getId()) : -1;
-				items.add(OverlayLayout.Item.line(label).add(worldText(s, true), UP)
-					.add(ping < 0 ? "" : " " + ping + "ms", pingColor(ping)));
+				items.add(OverlayLayout.Item.line(label).add(mini ? "W" + s.getId() : worldText(s, true), UP)
+					.add(ping < 0 || mini ? "" : " " + ping + "ms", pingColor(ping)).target(s));
 			}
 		}
 
 		for (Map.Entry<String, World> e : plugin.activityWorlds().entrySet())
 		{
 			World w = e.getValue();
-			items.add(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE));
+			items.add(OverlayLayout.Item.line(e.getKey()).add(w == null ? "none" : worldText(w, false), w == null ? MUTED : Color.WHITE).target(w));
 		}
 
 		if (config.showRecords())
@@ -292,6 +399,19 @@ class PlayerCountOverlay extends Overlay
 			items.add(OverlayLayout.Item.graph(plugin.getHistory().series(now, window, world), now, window));
 		}
 		return items;
+	}
+
+	private String shortFinder()
+	{
+		switch (config.finderMode())
+		{
+			case BUSIEST:
+				return "Busy";
+			case LOWEST_PING:
+				return "Fast";
+			default:
+				return "Quiet";
+		}
 	}
 
 	/** Appends the +/- in green/red (or the value's colour if colouring is off). */

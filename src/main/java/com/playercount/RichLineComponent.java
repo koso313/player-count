@@ -29,6 +29,8 @@ class RichLineComponent implements LayoutableRenderableEntity
 	private final String left;
 	private final Color leftColor;
 	private final List<Part> right = new ArrayList<>();
+	private Rectangle tracked;
+	private boolean underline;
 
 	private final Rectangle bounds = new Rectangle();
 	private Point preferredLocation = new Point();
@@ -46,6 +48,20 @@ class RichLineComponent implements LayoutableRenderableEntity
 		{
 			right.add(new Part(text, color));
 		}
+		return this;
+	}
+
+	/** Copies where this line is drawn into the given rectangle on every render (for click targets). */
+	RichLineComponent track(Rectangle into)
+	{
+		this.tracked = into;
+		return this;
+	}
+
+	/** Underlines the value, to show it can be clicked. */
+	RichLineComponent underline(boolean on)
+	{
+		this.underline = on;
 		return this;
 	}
 
@@ -77,6 +93,10 @@ class RichLineComponent implements LayoutableRenderableEntity
 		text(graphics, left, leftColor, x, baseline);
 
 		int rx = x + preferredSize.width - rightWidth(fm);
+		if (underline && !right.isEmpty())
+		{
+			g2(graphics, right.get(0).getColor(), rx, baseline + 2, rightWidth(fm));
+		}
 		for (Part p : right)
 		{
 			text(graphics, p.getText(), p.getColor(), rx, baseline);
@@ -86,7 +106,17 @@ class RichLineComponent implements LayoutableRenderableEntity
 		Dimension size = new Dimension(preferredSize.width, fm.getHeight());
 		bounds.setLocation(preferredLocation);
 		bounds.setSize(size);
+		if (tracked != null)
+		{
+			tracked.setBounds(bounds);
+		}
 		return size;
+	}
+
+	private static void g2(Graphics2D g, Color c, int x, int y, int w)
+	{
+		g.setColor(c);
+		g.drawLine(x, y, x + w - 1, y);
 	}
 
 	private static void text(Graphics2D g, String s, Color c, int x, int y)

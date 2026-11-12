@@ -95,6 +95,42 @@ public class Showcase
 			overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.HORIZONTAL, strip)), 2),
 			"png", new File(out, "overlay-layouts.png"));
 
+		// Sizes: the old way (whole image shrunk to 75%) next to the compact layout used below 90% now
+		List<BufferedImage> sizes = new ArrayList<>();
+		sizes.add(shrunk(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, strip), 0.75));
+		sizes.add(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.VERTICAL, strip, true));
+		sizes.add(overlay(painter, PlayerCountConfig.FrameStyle.DARK, PlayerCountConfig.Layout.VERTICAL, strip, true));
+		sizes.add(overlay(painter, PlayerCountConfig.FrameStyle.RUNELITE, PlayerCountConfig.Layout.VERTICAL, strip, true));
+		ImageIO.write(onGrass(sizes, 2), "png", new File(out, "overlay-compact-vertical.png"));
+		List<BufferedImage> hsizes = new ArrayList<>();
+		hsizes.add(shrunk(overlay(painter, PlayerCountConfig.FrameStyle.STEEL, PlayerCountConfig.Layout.HORIZONTAL, strip), 0.75));
+		for (PlayerCountConfig.FrameStyle style : PlayerCountConfig.FrameStyle.values())
+		{
+			hsizes.add(overlay(painter, style, PlayerCountConfig.Layout.HORIZONTAL, strip, true));
+		}
+		ImageIO.write(stacked(hsizes, 2), "png", new File(out, "overlay-compact-horizontal.png"));
+
+		// Sizes at 1:1 (exactly as drawn in game) and an integer 3x zoom: normal, compact, mini
+		List<OverlayLayout.Item> miniItems = new ArrayList<>();
+		miniItems.add(OverlayLayout.Item.line("W302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
+		miniItems.add(OverlayLayout.Item.line("OSRS").add("115.2k", Color.WHITE));
+		miniItems.add(OverlayLayout.Item.line("Ping").add("34", PlayerCountOverlay.UP));
+		miniItems.add(OverlayLayout.Item.line("Near").add("14", Color.WHITE));
+		miniItems.add(OverlayLayout.Item.line("Quiet").add("W674", PlayerCountOverlay.UP));
+		for (PlayerCountConfig.Layout layout : PlayerCountConfig.Layout.values())
+		{
+			List<BufferedImage> row = Arrays.asList(
+				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, strip, false, false),
+				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, strip, true, false),
+				overlay(painter, PlayerCountConfig.FrameStyle.STEEL, layout, miniItems, true, true),
+				overlay(painter, PlayerCountConfig.FrameStyle.DARK, layout, miniItems, true, true),
+				overlay(painter, PlayerCountConfig.FrameStyle.RUNELITE, layout, miniItems, true, true));
+			String name = layout.name().toLowerCase();
+			BufferedImage one = layout == PlayerCountConfig.Layout.VERTICAL ? onGrass(row, 1) : stacked(row, 1);
+			ImageIO.write(one, "png", new File(out, "sizes-" + name + "-1x.png"));
+			ImageIO.write(layout == PlayerCountConfig.Layout.VERTICAL ? onGrass(row, 3) : stacked(row, 3), "png", new File(out, "sizes-" + name + "-3x.png"));
+		}
+
 		// Sidebar
 		WorldResult result = new WorldResult();
 		result.setWorlds(worlds);
@@ -136,17 +172,30 @@ public class Showcase
 	private static BufferedImage overlay(FramePainter painter, PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout,
 		List<OverlayLayout.Item> items)
 	{
+		return overlay(painter, style, layout, items, false);
+	}
+
+	private static BufferedImage overlay(FramePainter painter, PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout,
+		List<OverlayLayout.Item> items, boolean compact)
+	{
+		return overlay(painter, style, layout, items, compact, false);
+	}
+
+	private static BufferedImage overlay(FramePainter painter, PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout,
+		List<OverlayLayout.Item> items, boolean compact, boolean mini)
+	{
+		compact = compact || mini;
 		BufferedImage img = new BufferedImage(1000, 500, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
-		g.setFont(FontManager.getRunescapeFont());
-		Rectangle insets = FramePainter.insets(style);
+		g.setFont(compact ? FontManager.getRunescapeSmallFont() : FontManager.getRunescapeFont());
+		Rectangle insets = FramePainter.insets(style, compact);
 		boolean custom = style != PlayerCountConfig.FrameStyle.RUNELITE;
 
 		PanelComponent panel = new PanelComponent();
-		int content = OverlayLayout.populate(panel, items, style, layout, true, painter, g);
+		int content = OverlayLayout.populate(panel, items, style, layout, true, painter, g, compact, mini);
 		panel.setBorder(insets);
 		panel.setBackgroundColor(custom ? null : ComponentConstants.STANDARD_BACKGROUND_COLOR);
-		panel.setPreferredSize(new Dimension(Math.max(OverlayLayout.minWidth(style, layout), content + insets.x + insets.width + 2), 0));
+		panel.setPreferredSize(new Dimension(Math.max(OverlayLayout.minWidth(style, layout, compact), content + insets.x + insets.width + 2), 0));
 
 		Graphics2D probe = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics();
 		probe.setFont(g.getFont());
@@ -163,6 +212,19 @@ public class Showcase
 		}
 		g.dispose();
 		return img.getSubimage(0, 0, size.width, size.height);
+	}
+
+	/** What scaling the finished image down looks like (the old behaviour), nearest-neighbour like the game. */
+	private static BufferedImage shrunk(BufferedImage img, double f)
+	{
+		int w = (int) Math.round(img.getWidth() * f);
+		int h = (int) Math.round(img.getHeight() * f);
+		BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = out.createGraphics();
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+		g.drawImage(img, 0, 0, w, h, null);
+		g.dispose();
+		return out;
 	}
 
 	private static BufferedImage stacked(List<BufferedImage> panels, int scale)
@@ -261,6 +323,7 @@ public class Showcase
 		{
 			WorldListPanel p = panel.get();
 			frame.get().validate();
+			p.previewHover(4);
 			BufferedImage i = new BufferedImage(p.getWidth(), p.getHeight(), BufferedImage.TYPE_INT_ARGB);
 			Graphics2D g = i.createGraphics();
 			p.paint(g);

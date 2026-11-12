@@ -22,7 +22,11 @@ public interface PlayerCountConfig extends Config
 	// Renamed from overlayScale: an early build could save a wrong size there.
 	String SCALE_KEY = "overlaySize";
 	String FAVORITES_KEY = "favoriteWorlds";
-	int MIN_SCALE = 50;
+	int MIN_SCALE = 60;
+	/** Below this the overlay switches to the compact layout rather than shrinking (shrunk pixel fonts blur). */
+	int COMPACT_BELOW = 90;
+	/** Below this it goes mini: short labels on one line, no title. */
+	int MINI_BELOW = 75;
 	int MAX_SCALE = 300;
 
 	@ConfigSection(name = "Look & size", description = "Frame style, size and when the overlay hides", position = -1)
@@ -65,7 +69,7 @@ public interface PlayerCountConfig extends Config
 		return 90;
 	}
 
-	@ConfigItem(keyName = SCALE_KEY, name = "Size", description = "Overlay size. You can also hold Alt and drag the overlay's corner to resize it.", section = lookSection, position = 2)
+	@ConfigItem(keyName = SCALE_KEY, name = "Size", description = "Overlay size. Text is never shrunk (that blurs it): 60-74% is mini (short labels, one line), 75-89% compact (the game's small font), 90-110% normal, above that scales up. You can also hold Alt and drag the overlay's corner.", section = lookSection, position = 2)
 	@Range(min = MIN_SCALE, max = MAX_SCALE)
 	@Units(Units.PERCENT)
 	default int overlayScale()

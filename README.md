@@ -22,12 +22,22 @@ history.
 - **Vertical or horizontal layout**: a list, or a strip of labelled cells for the top or bottom of the
   screen.
 - **Drag and resize**: hold Alt and drag to move it, or drag its corner to resize it. There's also a
-  Size setting (50–300%).
+  Size setting (60–300%). Text is never shrunk, since that blurs the game's pixel font. Smaller sizes
+  switch to a **compact** layout (the game's small font) and then **mini** (short labels on one line),
+  so everything stays pixel-sharp. Larger sizes scale up.
+- **Click to hop**: click the suggested world or an activity world in the overlay to hop there. You
+  can also right-click the overlay for Hop and Next world.
 - **Auto-hide** in combat, in instances (boss rooms, raids, minigames), or until you hover over it.
 
 ![The three frame styles](docs/overlay-styles.png)
 
 ![Horizontal layout in each frame style](docs/overlay-horizontal.png)
+
+**Sizes:** normal, compact and mini, shown enlarged 3x:
+
+![Sizes, vertical](docs/sizes-vertical.png)
+
+![Sizes, horizontal](docs/sizes-horizontal.png)
 
 ## World finder
 

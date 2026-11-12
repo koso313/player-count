@@ -15,6 +15,7 @@ import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TextComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
+import net.runelite.http.api.worlds.World;
 
 /**
  * Turns the overlay's lines into components, as a vertical list or a horizontal strip.
@@ -24,6 +25,8 @@ final class OverlayLayout
 {
 	/** Space between a line's label and its value (vertical). */
 	static final int GAP = 10;
+	private static final int COMPACT_GAP = 6;
+	private static final int COMPACT_GRAPH_HEIGHT = 30;
 
 	private OverlayLayout()
 	{
@@ -37,6 +40,12 @@ final class OverlayLayout
 		final List<PopulationHistory.Point> graph;
 		final Instant now;
 		final Duration window;
+		/** World to hop to when this line is clicked, or null. */
+		World target;
+		/** Set before layout when the mouse is over this line, to underline it. */
+		boolean hovered;
+		/** Where the line was drawn last, in the overlay's unscaled coordinates (filled in while rendering). */
+		final Rectangle hitBox = new Rectangle();
 
 		private Item(String label, List<PopulationHistory.Point> graph, Instant now, Duration window)
 		{
@@ -69,21 +78,38 @@ final class OverlayLayout
 		{
 			return graph != null;
 		}
+
+		Item target(World world)
+		{
+			this.target = world;
+			return this;
+		}
 	}
 
 	/**
 	 * Fills the panel and returns the content width it needs (excluding the panel's insets).
+	 * Compact uses tighter spacing; the caller sets the game's small font on {@code g} for it.
 	 */
 	static int populate(PanelComponent panel, List<Item> items, PlayerCountConfig.FrameStyle style,
-		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g)
+		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g, boolean compact)
 	{
+		return populate(panel, items, style, layout, title, painter, g, compact, false);
+	}
+
+	/** Mini: one line per cell (label then value), for the smallest sizes. Implies compact spacing. */
+	static int populate(PanelComponent panel, List<Item> items, PlayerCountConfig.FrameStyle style,
+		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g, boolean compact, boolean mini)
+	{
+		compact = compact || mini;
+		title = title && !mini;
 		FontMetrics fm = g.getFontMetrics();
 		Color label = FramePainter.labelColor(style);
-		Rectangle insets = FramePainter.insets(style);
+		Rectangle insets = FramePainter.insets(style, compact);
+		int gap = compact ? COMPACT_GAP : GAP;
 
 		if (layout == PlayerCountConfig.Layout.HORIZONTAL)
 		{
-			Strip strip = new Strip(items, style, label, painter, insets);
+			Strip strip = new Strip(items, style, label, painter, insets, compact, mini);
 			panel.getChildren().add(strip);
 			return strip.neededWidth(g);
 		}
@@ -103,15 +129,17 @@ final class OverlayLayout
 		{
 			if (item.isGraph())
 			{
-				panel.getChildren().add(new GraphComponent(item.graph, item.now, item.window));
+				panel.getChildren().add(compact
+					? new GraphComponent(item.graph, item.now, item.window, COMPACT_GRAPH_HEIGHT, true)
+					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
 			}
-			width = Math.max(width, c.neededWidth(fm, GAP));
+			width = Math.max(width, c.neededWidth(fm, gap));
 			panel.getChildren().add(c);
 		}
 		return width;
@@ -120,20 +148,24 @@ final class OverlayLayout
 	/** Every item side by side: label on top, value underneath, divided like the game's interfaces. */
 	static final class Strip implements LayoutableRenderableEntity
 	{
-		private static final int CELL_PAD = 7;
-		private static final int GRAPH_WIDTH = 90;
 
 		private final List<Item> items;
 		private final PlayerCountConfig.FrameStyle style;
 		private final Color labelColor;
 		private final FramePainter painter;
 		private final Rectangle insets;
+		private final int cellPad;
+		private final int graphWidth;
+		private final boolean oneLine;
 
 		private final Rectangle bounds = new Rectangle();
 		private Point preferredLocation = new Point();
 
-		Strip(List<Item> items, PlayerCountConfig.FrameStyle style, Color labelColor, FramePainter painter, Rectangle insets)
+		Strip(List<Item> items, PlayerCountConfig.FrameStyle style, Color labelColor, FramePainter painter, Rectangle insets, boolean compact, boolean oneLine)
 		{
+			this.oneLine = oneLine;
+			this.cellPad = oneLine ? 3 : compact ? 4 : 7;
+			this.graphWidth = oneLine ? 48 : compact ? 64 : 90;
 			this.items = items;
 			this.style = style;
 			this.labelColor = labelColor;
@@ -158,18 +190,22 @@ final class OverlayLayout
 			return style == PlayerCountConfig.FrameStyle.STEEL ? FramePainter.dividerHeight(style) + 2 : 5;
 		}
 
-		private static int cellWidth(Item item, FontMetrics small, FontMetrics value)
+		private int cellWidth(Item item, FontMetrics small, FontMetrics value)
 		{
 			if (item.isGraph())
 			{
-				return GRAPH_WIDTH;
+				return graphWidth;
 			}
 			int v = 0;
 			for (RichLineComponent.Part p : item.parts)
 			{
 				v += value.stringWidth(p.getText());
 			}
-			return Math.max(small.stringWidth(item.label), v) + 2 * CELL_PAD;
+			if (oneLine)
+			{
+				return small.stringWidth(item.label) + (item.label.isEmpty() ? 0 : 4) + v + 2 * cellPad;
+			}
+			return Math.max(small.stringWidth(item.label), v) + 2 * cellPad;
 		}
 
 		@Override
@@ -177,7 +213,7 @@ final class OverlayLayout
 		{
 			FontMetrics small = g.getFontMetrics(FontManager.getRunescapeSmallFont());
 			FontMetrics value = g.getFontMetrics();
-			int h = small.getHeight() + value.getHeight();
+			int h = oneLine ? value.getHeight() : small.getHeight() + value.getHeight();
 			int x = preferredLocation.x;
 			int y = preferredLocation.y;
 
@@ -200,6 +236,25 @@ final class OverlayLayout
 					graph.setPreferredSize(new Dimension(cw - 6, h));
 					graph.render(g);
 				}
+				else if (oneLine)
+				{
+					int lx = x + cellPad;
+					int base = y + value.getAscent();
+					text(g, item.label, labelColor, lx, base);
+					int vx = lx + value.stringWidth(item.label) + (item.label.isEmpty() ? 0 : 4);
+					item.hitBox.setBounds(x, y, cw, h);
+					int vw = 0;
+					for (RichLineComponent.Part p : item.parts)
+					{
+						text(g, p.getText(), p.getColor(), vx + vw, base);
+						vw += value.stringWidth(p.getText());
+					}
+					if (item.hovered && vw > 0)
+					{
+						g.setColor(item.parts.get(0).getColor());
+						g.drawLine(vx, base + 2, vx + vw - 1, base + 2);
+					}
+				}
 				else
 				{
 					java.awt.Font valueFont = g.getFont();
@@ -212,6 +267,13 @@ final class OverlayLayout
 						vw += value.stringWidth(p.getText());
 					}
 					int vx = x + (cw - vw) / 2;
+					item.hitBox.setBounds(x, y, cw, h);
+					if (item.hovered && vw > 0)
+					{
+						int uy = y + small.getHeight() + value.getAscent() + 2;
+						g.setColor(item.parts.get(0).getColor());
+						g.drawLine(vx, uy, vx + vw - 1, uy);
+					}
 					for (RichLineComponent.Part p : item.parts)
 					{
 						text(g, p.getText(), p.getColor(), vx, y + small.getHeight() + value.getAscent());
@@ -256,8 +318,8 @@ final class OverlayLayout
 	}
 
 	/** Smallest panel width for the style and layout. */
-	static int minWidth(PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout)
+	static int minWidth(PlayerCountConfig.FrameStyle style, PlayerCountConfig.Layout layout, boolean compact)
 	{
-		return layout == PlayerCountConfig.Layout.HORIZONTAL ? 60 : FramePainter.minWidth(style);
+		return layout == PlayerCountConfig.Layout.HORIZONTAL || compact ? 60 : FramePainter.minWidth(style);
 	}
 }
