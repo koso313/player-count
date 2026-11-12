@@ -193,7 +193,7 @@ public interface PlayerCountConfig extends Config
 		return WorldTheme.WINTERTODT;
 	}
 
-	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites (the finder filters for membership, region and max ping don't apply to favourites). The sidebar's stars and Favourites row edit this list too (reopen the settings to see their changes); deleting a world here removes it there.", section = finderSection, position = 2)
+	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites (the finder filters for membership, region and max ping don't apply to favourites). The sidebar's stars and Favourites row edit this list too; deleting a world here removes it there. If these settings were open when you changed favourites in the sidebar, reopen them before editing this box.", section = finderSection, position = 2)
 	default String favoriteWorlds()
 	{
 		return "";

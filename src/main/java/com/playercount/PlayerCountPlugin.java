@@ -219,7 +219,6 @@ public class PlayerCountPlugin extends Plugin
 	private final DataStore store = new DataStore(new File(RuneLite.RUNELITE_DIR, "player-count"));
 	/** Worlds the user starred. Read on any thread, replaced (not mutated) on change. */
 	private volatile Set<Integer> favorites = Collections.emptySet();
-	private final FavouritesGuard favouritesGuard = new FavouritesGuard();
 	private final Set<Integer> cycled = new HashSet<>();
 	private Instant lastCycle;
 	private Instant lastCombat;
@@ -486,13 +485,6 @@ public class PlayerCountPlugin extends Plugin
 		}
 		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
 		{
-			// An open settings panel can write back an old list; keep sidebar changes from the last minute.
-			Set<Integer> written = parseFavorites(config.favoriteWorlds());
-			Set<Integer> wanted = favouritesGuard.reconcile(written, Instant.now());
-			if (!wanted.equals(written))
-			{
-				configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(wanted));
-			}
 			recomputeFavorites();
 		}
 		if (PlayerCountConfig.SIDEBAR_KEY.equals(e.getKey()))
@@ -1306,7 +1298,6 @@ public class PlayerCountPlugin extends Plugin
 		{
 			list.remove(world);
 		}
-		favouritesGuard.sidebarChanged(world, on, Instant.now());
 		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(list));
 		recomputeFavorites();
 		// RuneLite only writes settings to disk every few minutes or on exit; save stars straight away.
