@@ -949,6 +949,19 @@ public class PlayerCountPlugin extends Plugin
 			case LOWEST_PING:
 				mode = WorldStats.Mode.LOWEST_PING;
 				break;
+			case FAVOURITES:
+				switch (config.favouriteOrder())
+				{
+					case FEWEST_PLAYERS:
+						mode = WorldStats.Mode.FAVOURITES_BY_PLAYERS;
+						break;
+					case BOTH:
+						mode = WorldStats.Mode.FAVOURITES_BALANCED;
+						break;
+					default:
+						mode = WorldStats.Mode.FAVOURITES_BY_PING;
+				}
+				break;
 			default:
 				mode = WorldStats.Mode.QUIETEST;
 		}
@@ -964,7 +977,6 @@ public class PlayerCountPlugin extends Plugin
 			.pings(config.pingEnabled() ? pingService.all() : Collections.emptyMap())
 			.maxPing(config.pingEnabled() ? config.maxPing() : 0)
 			.favorites(favorites)
-			.favoritesOnly(config.favoritesOnly())
 			.usual(config.preferUsual() ? usage.usualAll(Instant.now()) : Collections.emptyMap())
 			.preferUsual(config.preferUsual())
 			.build();
@@ -980,7 +992,7 @@ public class PlayerCountPlugin extends Plugin
 		}
 		if (suggestion == null)
 		{
-			chat("No world matches your world finder settings.");
+			chat(noMatchMessage());
 			return;
 		}
 		hopTo(suggestion);
@@ -1044,12 +1056,14 @@ public class PlayerCountPlugin extends Plugin
 		List<World> ranked = WorldStats.rank(latest.getWorlds(), criteria(latest, skip));
 		if (ranked.isEmpty() && !cycled.isEmpty())
 		{
-			cycled.clear(); // been through the whole list; start over
-			ranked = WorldStats.rank(latest.getWorlds(), criteria(latest, recentWorlds()));
+			// Been through the whole list: start over. Skip-recent is ignored here, since every world on the
+			// list was just visited and would otherwise stall the cycle.
+			cycled.clear();
+			ranked = WorldStats.rank(latest.getWorlds(), criteria(latest, Collections.emptySet()));
 		}
 		if (ranked.isEmpty())
 		{
-			chat("No world matches your world finder settings.");
+			chat(noMatchMessage());
 			return;
 		}
 		World next = ranked.get(0);
@@ -1060,6 +1074,15 @@ public class PlayerCountPlugin extends Plugin
 	}
 
 	// ---- Favourites ----
+
+	private String noMatchMessage()
+	{
+		if (config.finderMode() == PlayerCountConfig.FinderMode.FAVOURITES && favorites.isEmpty())
+		{
+			return "You have no favourite worlds yet. Add some under World finder > Favourite worlds, or star them in the sidebar.";
+		}
+		return "No world matches your world finder settings.";
+	}
 
 	static Set<Integer> parseFavorites(String raw)
 	{
@@ -1079,6 +1102,11 @@ public class PlayerCountPlugin extends Plugin
 			}
 		}
 		return Collections.unmodifiableSet(out);
+	}
+
+	boolean isFavourite(int world)
+	{
+		return favorites.contains(world);
 	}
 
 	void toggleFavorite(int world)

@@ -54,6 +54,7 @@ class PlayerCountOverlay extends Overlay
 	private final TooltipManager tooltipManager;
 	private final FramePainter painter = new FramePainter();
 	private final PanelComponent panelComponent = new PanelComponent();
+	private final OverlayLayout.WidthMemory widths = new OverlayLayout.WidthMemory();
 
 	/** Unscaled size last frame; PanelComponent itself sizes from the previous frame too. */
 	private Dimension lastNatural;
@@ -131,7 +132,13 @@ class PlayerCountOverlay extends Overlay
 		markHover(items);
 
 		panelComponent.getChildren().clear();
-		int content = OverlayLayout.populate(panelComponent, items, style, layout, config.showTitle(), painter, graphics, compact, mini);
+		StringBuilder shown = new StringBuilder().append(style).append('|').append(layout).append('|').append(size).append('|').append(config.showTitle());
+		for (OverlayLayout.Item item : items)
+		{
+			shown.append('|').append(item.label);
+		}
+		widths.begin(shown.toString());
+		int content = OverlayLayout.populate(panelComponent, items, style, layout, config.showTitle(), painter, graphics, compact, mini, widths);
 
 		Rectangle insets = FramePainter.insets(style, compact);
 		int naturalWidth = Math.max(OverlayLayout.minWidth(style, layout, compact), content + insets.x + insets.width + 2);
@@ -292,7 +299,8 @@ class PlayerCountOverlay extends Overlay
 			int players = plugin.currentWorldPlayers();
 			Color color = players > config.busyThreshold() ? DOWN : Color.WHITE;
 			String count = players < 0 ? "?" : String.format("%,d", players);
-			items.add(change(OverlayLayout.Item.line((mini ? "W" : "World ") + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange()));
+			items.add(change(OverlayLayout.Item.line((mini ? "W" : "World ") + plugin.currentWorld()).add(count, color), color, plugin.currentWorldChange())
+				.star(plugin.isFavourite(plugin.currentWorld())));
 		}
 
 		WorldStats.Totals totals = plugin.getTotals();
@@ -395,6 +403,8 @@ class PlayerCountOverlay extends Overlay
 				return "Busy";
 			case LOWEST_PING:
 				return "Fast";
+			case FAVOURITES:
+				return "Fav";
 			default:
 				return "Quiet";
 		}

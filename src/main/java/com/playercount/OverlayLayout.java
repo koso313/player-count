@@ -8,8 +8,12 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.time.Duration;
 import java.time.Instant;
+import java.awt.Polygon;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 import net.runelite.client.ui.overlay.components.PanelComponent;
@@ -27,6 +31,9 @@ final class OverlayLayout
 	static final int GAP = 10;
 	private static final int COMPACT_GAP = 6;
 	private static final int COMPACT_GRAPH_HEIGHT = 30;
+	/** Width of the favourite star drawn after a label, including the space before it. */
+	static final int STAR_W = 12;
+	static final Color GOLD = new Color(0xFF, 0xC8, 0x3C);
 
 	private OverlayLayout()
 	{
@@ -44,6 +51,8 @@ final class OverlayLayout
 		World target;
 		/** Set before layout when the mouse is over this line, to underline it. */
 		boolean hovered;
+		/** Draw a gold star after the label (your current world is a favourite). */
+		boolean star;
 		/** Where the line was drawn last, in the overlay's unscaled coordinates (filled in while rendering). */
 		final Rectangle hitBox = new Rectangle();
 
@@ -84,6 +93,12 @@ final class OverlayLayout
 			this.target = world;
 			return this;
 		}
+
+		Item star(boolean on)
+		{
+			this.star = on;
+			return this;
+		}
 	}
 
 	/**
@@ -93,12 +108,23 @@ final class OverlayLayout
 	static int populate(PanelComponent panel, List<Item> items, PlayerCountConfig.FrameStyle style,
 		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g, boolean compact)
 	{
-		return populate(panel, items, style, layout, title, painter, g, compact, false);
+		return populate(panel, items, style, layout, title, painter, g, compact, false, null);
 	}
 
 	/** Mini: one line per cell (label then value), for the smallest sizes. Implies compact spacing. */
 	static int populate(PanelComponent panel, List<Item> items, PlayerCountConfig.FrameStyle style,
 		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g, boolean compact, boolean mini)
+	{
+		return populate(panel, items, style, layout, title, painter, g, compact, mini, null);
+	}
+
+	/**
+	 * @param widths remembers the widest each line/cell has been, so the overlay's edges don't move as numbers
+	 *               tick over (null = measure fresh, for screenshots)
+	 */
+	static int populate(PanelComponent panel, List<Item> items, PlayerCountConfig.FrameStyle style,
+		PlayerCountConfig.Layout layout, boolean title, FramePainter painter, Graphics2D g, boolean compact, boolean mini,
+		WidthMemory widths)
 	{
 		compact = compact || mini;
 		title = title && !mini;
@@ -109,7 +135,7 @@ final class OverlayLayout
 
 		if (layout == PlayerCountConfig.Layout.HORIZONTAL)
 		{
-			Strip strip = new Strip(items, style, label, painter, insets, compact, mini);
+			Strip strip = new Strip(items, style, label, painter, insets, compact, mini, widths);
 			panel.getChildren().add(strip);
 			return strip.neededWidth(g);
 		}
@@ -134,7 +160,7 @@ final class OverlayLayout
 					: new GraphComponent(item.graph, item.now, item.window));
 				continue;
 			}
-			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered);
+			RichLineComponent c = new RichLineComponent(item.label, label).track(item.hitBox).underline(item.hovered).star(item.star);
 			for (RichLineComponent.Part p : item.parts)
 			{
 				c.add(p.getText(), p.getColor());
@@ -142,7 +168,7 @@ final class OverlayLayout
 			width = Math.max(width, c.neededWidth(fm, gap));
 			panel.getChildren().add(c);
 		}
-		return width;
+		return widths == null ? width : widths.stable("vertical", width);
 	}
 
 	/** Every item side by side: label on top, value underneath, divided like the game's interfaces. */
@@ -157,12 +183,15 @@ final class OverlayLayout
 		private final int cellPad;
 		private final int graphWidth;
 		private final boolean oneLine;
+		private final WidthMemory widths;
 
 		private final Rectangle bounds = new Rectangle();
 		private Point preferredLocation = new Point();
 
-		Strip(List<Item> items, PlayerCountConfig.FrameStyle style, Color labelColor, FramePainter painter, Rectangle insets, boolean compact, boolean oneLine)
+		Strip(List<Item> items, PlayerCountConfig.FrameStyle style, Color labelColor, FramePainter painter, Rectangle insets, boolean compact, boolean oneLine,
+			WidthMemory widths)
 		{
+			this.widths = widths;
 			this.oneLine = oneLine;
 			this.cellPad = oneLine ? 3 : compact ? 4 : 7;
 			this.graphWidth = oneLine ? 48 : compact ? 64 : 90;
@@ -199,13 +228,13 @@ final class OverlayLayout
 			int v = 0;
 			for (RichLineComponent.Part p : item.parts)
 			{
-				v += value.stringWidth(p.getText());
+				v += textWidth(value, p.getText());
 			}
-			if (oneLine)
-			{
-				return small.stringWidth(item.label) + (item.label.isEmpty() ? 0 : 4) + v + 2 * cellPad;
-			}
-			return Math.max(small.stringWidth(item.label), v) + 2 * cellPad;
+			int star = item.star ? STAR_W : 0;
+			int w = oneLine
+				? small.stringWidth(item.label) + star + (item.label.isEmpty() ? 0 : 4) + v + 2 * cellPad
+				: Math.max(small.stringWidth(item.label) + star, v) + 2 * cellPad;
+			return widths == null ? w : widths.stable("cell:" + item.label, w);
 		}
 
 		@Override
@@ -242,6 +271,11 @@ final class OverlayLayout
 					int base = y + value.getAscent();
 					text(g, item.label, labelColor, lx, base);
 					int vx = lx + value.stringWidth(item.label) + (item.label.isEmpty() ? 0 : 4);
+					if (item.star)
+					{
+						star(g, vx - 1, base - value.getAscent() / 2 - 1, 4);
+						vx += STAR_W;
+					}
 					item.hitBox.setBounds(x, y, cw, h);
 					int vw = 0;
 					for (RichLineComponent.Part p : item.parts)
@@ -259,7 +293,13 @@ final class OverlayLayout
 				{
 					java.awt.Font valueFont = g.getFont();
 					g.setFont(FontManager.getRunescapeSmallFont());
-					text(g, item.label, labelColor, x + (cw - small.stringWidth(item.label)) / 2, y + small.getAscent());
+					int lw = small.stringWidth(item.label) + (item.star ? STAR_W : 0);
+					int lx = x + (cw - lw) / 2;
+					text(g, item.label, labelColor, lx, y + small.getAscent());
+					if (item.star)
+					{
+						star(g, lx + small.stringWidth(item.label) + 3, y + small.getAscent() / 2 + 1, 4);
+					}
 					g.setFont(valueFont);
 					int vw = 0;
 					for (RichLineComponent.Part p : item.parts)
@@ -314,6 +354,75 @@ final class OverlayLayout
 		public void setPreferredSize(Dimension dimension)
 		{
 			// Sizes itself from its content.
+		}
+	}
+
+	/**
+	 * Text width with every digit measured as the widest digit, so a number's width only changes when it
+	 * gains or loses a digit, not every time a digit changes.
+	 */
+	static int textWidth(FontMetrics fm, String s)
+	{
+		int widest = 0;
+		for (char d = '0'; d <= '9'; d++)
+		{
+			widest = Math.max(widest, fm.charWidth(d));
+		}
+		int w = 0;
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			w += Character.isDigit(c) ? widest : fm.charWidth(c);
+		}
+		return w;
+	}
+
+	/** A small gold five-pointed star with a dark outline, centred on (x + r, cy). */
+	static void star(Graphics2D g, int x, int cy, int r)
+	{
+		double cx = x + r;
+		Polygon p = new Polygon();
+		for (int i = 0; i < 10; i++)
+		{
+			double rad = i % 2 == 0 ? r : r * 0.45;
+			double a = Math.PI / 2 + i * Math.PI / 5;
+			p.addPoint((int) Math.round(cx + rad * Math.cos(a)), (int) Math.round(cy - rad * Math.sin(a)));
+		}
+		Object aa = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		g.setColor(new Color(0x40, 0x2A, 0x00));
+		p.translate(1, 1);
+		g.fillPolygon(p);
+		p.translate(-1, -1);
+		g.setColor(GOLD);
+		g.fillPolygon(p);
+		if (aa != null)
+		{
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+		}
+	}
+
+	/** Remembers the widest each line/cell has needed; forgets when what's shown changes. */
+	static final class WidthMemory
+	{
+		private final Map<String, Integer> widest = new HashMap<>();
+		private String signature = "";
+
+		/** Call once per frame with a key describing what's shown (lines, style, layout, size). */
+		void begin(String signature)
+		{
+			if (!signature.equals(this.signature))
+			{
+				widest.clear();
+				this.signature = signature;
+			}
+		}
+
+		int stable(String key, int measured)
+		{
+			int w = Math.max(widest.getOrDefault(key, 0), measured);
+			widest.put(key, w);
+			return w;
 		}
 	}
 

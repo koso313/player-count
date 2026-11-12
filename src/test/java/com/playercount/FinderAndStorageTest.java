@@ -70,11 +70,40 @@ public class FinderAndStorageTest
 	}
 
 	@Test
-	public void favouritesOnly()
+	public void favouritesModeCyclesInChosenOrder()
 	{
-		WorldStats.Criteria c = base().favorites(new HashSet<>(Arrays.asList(1, 4))).favoritesOnly(true).build();
-		assertEquals(Arrays.asList(4, 1), ids(WorldStats.rank(WORLDS, c)));
-		assertNull(WorldStats.pick(WORLDS, base().favoritesOnly(true).build()));
+		java.util.Set<Integer> favs = new HashSet<>(Arrays.asList(1, 2, 4));
+		Map<Integer, Integer> pings = map(1, 30, 4, 80); // world 2 not pinged yet
+		WorldStats.Criteria byPing = base().favorites(favs).pings(pings).mode(WorldStats.Mode.FAVOURITES_BY_PING).build();
+		assertEquals(Arrays.asList(1, 4, 2), ids(WorldStats.rank(WORLDS, byPing))); // unknown ping last, not dropped
+		WorldStats.Criteria byPlayers = base().favorites(favs).pings(pings).mode(WorldStats.Mode.FAVOURITES_BY_PLAYERS).build();
+		assertEquals(Arrays.asList(2, 4, 1), ids(WorldStats.rank(WORLDS, byPlayers)));
+		assertNull(WorldStats.pick(WORLDS, base().mode(WorldStats.Mode.FAVOURITES_BY_PING).build())); // no favourites
+	}
+
+	@Test
+	public void favouritesBothWeighsPingAndPlayers()
+	{
+		// 1: 300 players, 30ms   2: 100 players, 120ms   4: 200 players, 40ms
+		// scaled: 1 = 1.0 + 0.25 = 1.25   2 = 0.33 + 1.0 = 1.33   4 = 0.67 + 0.33 = 1.0
+		java.util.Set<Integer> favs = new HashSet<>(Arrays.asList(1, 2, 4));
+		WorldStats.Criteria both = base().favorites(favs).pings(map(1, 30, 2, 120, 4, 40)).mode(WorldStats.Mode.FAVOURITES_BALANCED).build();
+		assertEquals(Arrays.asList(4, 1, 2), ids(WorldStats.rank(WORLDS, both)));
+	}
+
+	@Test
+	public void widthsIgnoreWhichDigitsAndOnlyGrow()
+	{
+		java.awt.FontMetrics fm = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+			.createGraphics().getFontMetrics(net.runelite.client.ui.FontManager.getRunescapeFont());
+		assertEquals(OverlayLayout.textWidth(fm, "1,111"), OverlayLayout.textWidth(fm, "8,808"));
+		OverlayLayout.WidthMemory m = new OverlayLayout.WidthMemory();
+		m.begin("a");
+		assertEquals(50, m.stable("x", 50));
+		assertEquals(50, m.stable("x", 40)); // never shrinks
+		assertEquals(60, m.stable("x", 60));
+		m.begin("b"); // something else shown: start over
+		assertEquals(40, m.stable("x", 40));
 	}
 
 	@Test

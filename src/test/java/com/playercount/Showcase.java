@@ -112,7 +112,7 @@ public class Showcase
 
 		// Sizes at 1:1 (exactly as drawn in game) and an integer 3x zoom: Full, Medium, Small
 		List<OverlayLayout.Item> miniItems = new ArrayList<>();
-		miniItems.add(OverlayLayout.Item.line("W302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
+		miniItems.add(OverlayLayout.Item.line("W302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN).star(true));
 		miniItems.add(OverlayLayout.Item.line("OSRS").add("115.2k", Color.WHITE));
 		miniItems.add(OverlayLayout.Item.line("Ping").add("34", PlayerCountOverlay.UP));
 		miniItems.add(OverlayLayout.Item.line("Near").add("14", Color.WHITE));
@@ -160,7 +160,7 @@ public class Showcase
 	private static List<OverlayLayout.Item> basicItems()
 	{
 		List<OverlayLayout.Item> l = new ArrayList<>();
-		l.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN));
+		l.add(OverlayLayout.Item.line("World 302").add("1,799", Color.WHITE).add(" (-12)", PlayerCountOverlay.DOWN).star(true));
 		l.add(OverlayLayout.Item.line("Total").add("115,214", Color.WHITE).add(" (+158)", PlayerCountOverlay.UP));
 		l.add(OverlayLayout.Item.line("P2P / F2P").add("107.5k / 7.7k", Color.WHITE));
 		l.add(OverlayLayout.Item.line("Nearby").add("14", Color.WHITE));

@@ -12,6 +12,7 @@ history.
 
 - **Your world's player count** and the **OSRS total**, each with its change over the last minute
   (green for gains, red for losses).
+- Numbers update in place: the overlay keeps a steady width instead of shifting as digits change.
 - **Ping** to your world, **players nearby**, and how many **friends and clan members** are on your
   world.
 - **Members / F2P split** and a **per-region breakdown** (US, UK, DE, AU and more).
@@ -44,9 +45,13 @@ history.
 
 Suggests a world and hops you there from a hotkey, the overlay's right-click menu, or the sidebar.
 
-- Find the **quietest**, **busiest** or **lowest ping** world, or turn the finder **off**.
-- Filters: membership, region, **max ping**, **favourites only**, and skill-total worlds you have the
-  level for.
+- Find the **quietest**, **busiest** or **lowest ping** world, cycle through your **favourites**, or
+  turn the finder **off**.
+- **Favourites**: list worlds in the settings (`302, 330, 420`) or star them in the sidebar. Order them
+  by **lowest ping**, **fewest players**, or **both** weighed together. **Next world** cycles through
+  them in that order and starts over after the last one. A **gold star** beside your world in the
+  overlay means you're on a favourite.
+- Filters: membership, region, **max ping**, and skill-total worlds you have the level for.
 - **Skip recent worlds** you were on in the last X minutes.
 - **Prefer usually quiet**: over a few days of use it learns how busy each world usually is at each
   hour, and weighs that in alongside the current count.

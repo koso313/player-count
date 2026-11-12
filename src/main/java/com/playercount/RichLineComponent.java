@@ -31,6 +31,7 @@ class RichLineComponent implements LayoutableRenderableEntity
 	private final List<Part> right = new ArrayList<>();
 	private Rectangle tracked;
 	private boolean underline;
+	private boolean star;
 
 	private final Rectangle bounds = new Rectangle();
 	private Point preferredLocation = new Point();
@@ -65,11 +66,18 @@ class RichLineComponent implements LayoutableRenderableEntity
 		return this;
 	}
 
-	/** Width the line needs with the given gap between label and value. */
+	/** Gold star after the label. */
+	RichLineComponent star(boolean on)
+	{
+		this.star = on;
+		return this;
+	}
+
+	/** Width the line needs with the given gap between label and value (digits counted at their widest). */
 	int neededWidth(FontMetrics fm, int gap)
 	{
-		int w = fm.stringWidth(left);
-		int r = rightWidth(fm);
+		int w = fm.stringWidth(left) + (star ? OverlayLayout.STAR_W : 0);
+		int r = stableRightWidth(fm);
 		return r == 0 ? w : w + gap + r;
 	}
 
@@ -83,6 +91,17 @@ class RichLineComponent implements LayoutableRenderableEntity
 		return w;
 	}
 
+	/** Right side measured with digits at their widest, for sizing (drawing uses the real width). */
+	private int stableRightWidth(FontMetrics fm)
+	{
+		int w = 0;
+		for (Part p : right)
+		{
+			w += OverlayLayout.textWidth(fm, p.getText());
+		}
+		return w;
+	}
+
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
@@ -91,6 +110,10 @@ class RichLineComponent implements LayoutableRenderableEntity
 		int baseline = preferredLocation.y + fm.getHeight();
 
 		text(graphics, left, leftColor, x, baseline);
+		if (star)
+		{
+			OverlayLayout.star(graphics, x + fm.stringWidth(left) + 3, baseline - fm.getAscent() / 2 + 1, 4);
+		}
 
 		int rx = x + preferredSize.width - rightWidth(fm);
 		if (underline && !right.isEmpty())

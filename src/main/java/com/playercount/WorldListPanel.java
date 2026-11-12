@@ -127,6 +127,7 @@ class WorldListPanel extends PluginPanel
 	private static final Color ROW_SELECTED = new Color(0x3A, 0x3A, 0x3A);
 	private static final int ROW_HEIGHT = 36;
 	private static final int STAR_AREA = 22;
+	private static final javax.swing.ImageIcon STAR_ICON = starIcon();
 	/** The Hop button shown on the hovered row. */
 	private static final int HOP_W = 38;
 	private static final int HOP_H = 20;
@@ -404,6 +405,7 @@ class WorldListPanel extends PluginPanel
 		if (current == null)
 		{
 			worldTitle.setText(s.getCurrentWorld() > 0 ? "World " + s.getCurrentWorld() : "Not logged in");
+			worldTitle.setIcon(null);
 			worldPlayers.setText(" ");
 			worldInfo.setText(" ");
 			worldPing.setText("");
@@ -411,6 +413,9 @@ class WorldListPanel extends PluginPanel
 		else
 		{
 			worldTitle.setText("World " + current.getId());
+			boolean fav = s.getFavorites().contains(current.getId());
+			worldTitle.setIcon(fav ? STAR_ICON : null);
+			worldTitle.setToolTipText(fav ? "One of your favourite worlds" : null);
 			worldPlayers.setText(html(String.format("%,d players", current.getPlayers()), s.getChanges().get(current.getId())));
 			worldInfo.setText(activity(current) + "  |  " + WorldStats.regionCode(current.getRegion()) + usualText(current.getId(), "  |  usually "));
 			int ping = s.getPings().getOrDefault(current.getId(), -1);
@@ -828,6 +833,15 @@ class WorldListPanel extends PluginPanel
 			end--;
 		}
 		return end <= 0 ? "" : s.substring(0, end) + dots;
+	}
+
+	private static javax.swing.ImageIcon starIcon()
+	{
+		java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(14, 14, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g = img.createGraphics();
+		OverlayLayout.star(g, 1, 7, 6);
+		g.dispose();
+		return new javax.swing.ImageIcon(img);
 	}
 
 	/** For screenshots: show row {@code index} as hovered (with its Hop button). */

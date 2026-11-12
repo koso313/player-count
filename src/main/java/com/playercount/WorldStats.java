@@ -82,7 +82,6 @@ final class WorldStats
 		int maxPing;
 		@Builder.Default
 		Set<Integer> favorites = Collections.emptySet();
-		boolean favoritesOnly;
 		/** Typical counts at this hour; used when preferUsual is on. */
 		@Builder.Default
 		Map<Integer, Integer> usual = Collections.emptyMap();
@@ -93,7 +92,13 @@ final class WorldStats
 	{
 		QUIETEST,
 		BUSIEST,
-		LOWEST_PING
+		LOWEST_PING,
+		/** Only favourites, lowest ping first (unknown ping last). */
+		FAVOURITES_BY_PING,
+		/** Only favourites, fewest players first. */
+		FAVOURITES_BY_PLAYERS,
+		/** Only favourites, ping and players weighed equally (each scaled against the other favourites). */
+		FAVOURITES_BALANCED
 	}
 
 	static Totals totals(List<World> worlds)
@@ -163,7 +168,9 @@ final class WorldStats
 		{
 			return false;
 		}
-		if (c.isFavoritesOnly() && !c.getFavorites().contains(w.getId()))
+		boolean favouritesMode = c.getMode() == Mode.FAVOURITES_BY_PING || c.getMode() == Mode.FAVOURITES_BY_PLAYERS
+			|| c.getMode() == Mode.FAVOURITES_BALANCED;
+		if (favouritesMode && !c.getFavorites().contains(w.getId()))
 		{
 			return false;
 		}
@@ -190,16 +197,50 @@ final class WorldStats
 				order = Comparator.comparingInt(World::getPlayers).reversed();
 				break;
 			case LOWEST_PING:
-				order = Comparator.<World>comparingInt(w -> c.getPings().getOrDefault(w.getId(), Integer.MAX_VALUE))
+			case FAVOURITES_BY_PING:
+				order = Comparator.<World>comparingInt(w -> unknownLast(c.getPings().getOrDefault(w.getId(), -1)))
 					.thenComparingInt(World::getPlayers);
+				break;
+			case FAVOURITES_BY_PLAYERS:
+				order = Comparator.comparingInt(World::getPlayers);
 				break;
 			default:
 				order = Comparator.comparingDouble(w -> quietScore(w, c));
 		}
-		return worlds.stream()
-			.filter(w -> eligible(w, c))
-			.sorted(order.thenComparingInt(World::getId))
-			.collect(Collectors.toList());
+		List<World> eligible = worlds.stream().filter(w -> eligible(w, c)).collect(Collectors.toList());
+		if (c.getMode() == Mode.FAVOURITES_BALANCED)
+		{
+			order = balanced(eligible, c.getPings());
+		}
+		eligible.sort(order.thenComparingInt(World::getId));
+		return eligible;
+	}
+
+	/**
+	 * Ping and players each scaled 0..1 against the worlds being compared, then added: lowest total wins.
+	 * A world with no ping yet counts as the slowest.
+	 */
+	static Comparator<World> balanced(List<World> worlds, Map<Integer, Integer> pings)
+	{
+		int maxPing = 1;
+		int maxPlayers = 1;
+		for (World w : worlds)
+		{
+			maxPing = Math.max(maxPing, pings.getOrDefault(w.getId(), -1));
+			maxPlayers = Math.max(maxPlayers, w.getPlayers());
+		}
+		final double mp = maxPing;
+		final double ml = maxPlayers;
+		return Comparator.comparingDouble(w ->
+		{
+			int ping = pings.getOrDefault(w.getId(), -1);
+			return (ping < 0 ? 1.0 : ping / mp) + w.getPlayers() / ml;
+		});
+	}
+
+	private static int unknownLast(int ping)
+	{
+		return ping < 0 ? Integer.MAX_VALUE : ping;
 	}
 
 	/** Best eligible world, or null if none match. */

@@ -204,31 +204,43 @@ public interface PlayerCountConfig extends Config
 
 	// ---- World finder ----
 
-	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for, or Off to disable it", section = finderSection, position = 0)
+	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for, or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full.", section = finderSection, position = 0)
 	default FinderMode finderMode()
 	{
 		return FinderMode.QUIETEST;
 	}
 
-	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = finderSection, position = 1)
+	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420. Used by Find: Favourites, which cycles through them. Starring worlds in the sidebar edits this list too.", section = finderSection, position = 1)
+	default String favoriteWorlds()
+	{
+		return "";
+	}
+
+	@ConfigItem(keyName = "favouriteOrder", name = "Favourites order", description = "For Find: Favourites, which favourite comes first (and the order the Next world hotkey cycles through them). Both weighs ping and player count equally.", section = finderSection, position = 2)
+	default FavouriteOrder favouriteOrder()
+	{
+		return FavouriteOrder.LOWEST_PING;
+	}
+
+	@ConfigItem(keyName = "membership", name = "Membership", description = "Members or free-to-play worlds", section = finderSection, position = 3)
 	default Membership membership()
 	{
 		return Membership.SAME_AS_CURRENT;
 	}
 
-	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = finderSection, position = 2)
+	@ConfigItem(keyName = "region", name = "Region", description = "Only suggest worlds in this region", section = finderSection, position = 4)
 	default RegionFilter region()
 	{
 		return RegionFilter.ANY;
 	}
 
-	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = finderSection, position = 3)
+	@ConfigItem(keyName = "allowSkillTotal", name = "Skill total worlds", description = "Include skill-total worlds you have the level for", section = finderSection, position = 5)
 	default boolean allowSkillTotal()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = finderSection, position = 4)
+	@ConfigItem(keyName = "maxPing", name = "Max ping", description = "Only suggest worlds at or under this ping (0 = any)", section = finderSection, position = 6)
 	@Range(max = 1000)
 	@Units(Units.MILLISECONDS)
 	default int maxPing()
@@ -236,19 +248,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "favoritesOnly", name = "Favourites only", description = "Only suggest worlds you've starred in the sidebar", section = finderSection, position = 4)
-	default boolean favoritesOnly()
-	{
-		return false;
-	}
-
-	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = finderSection, position = 4)
+	@ConfigItem(keyName = "preferUsual", name = "Prefer usually quiet", description = "Weigh in how busy each world usually is at this hour (learned over a few days of use)", section = finderSection, position = 7)
 	default boolean preferUsual()
 	{
 		return false;
 	}
 
-	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = finderSection, position = 4)
+	@ConfigItem(keyName = "skipRecentMinutes", name = "Skip recent worlds", description = "Don't suggest worlds you were on in the last X minutes (0 = off)", section = finderSection, position = 8)
 	@Range(max = 120)
 	@Units(Units.MINUTES)
 	default int skipRecentMinutes()
@@ -256,13 +262,13 @@ public interface PlayerCountConfig extends Config
 		return 0;
 	}
 
-	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 6)
+	@ConfigItem(keyName = "hopKey", name = "Hop hotkey", description = "Hop to the suggested world. You can also right-click the overlay.", section = finderSection, position = 9)
 	default Keybind hopKey()
 	{
 		return Keybind.NOT_SET;
 	}
 
-	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 7)
+	@ConfigItem(keyName = "nextWorldKey", name = "Next world hotkey", description = "Each press hops to the next world on the finder's list, skipping ones this hotkey already took you to", section = finderSection, position = 10)
 	default Keybind nextWorldKey()
 	{
 		return Keybind.NOT_SET;
@@ -325,18 +331,32 @@ public interface PlayerCountConfig extends Config
 		return 3;
 	}
 
-	@ConfigItem(keyName = FAVORITES_KEY, name = "", description = "", hidden = true)
-	default String favoriteWorlds()
-	{
-		return "";
-	}
-
 	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to download Jagex's live world list", section = dataSection, position = 0)
 	@Range(min = MIN_REFRESH, max = 600)
 	@Units(Units.SECONDS)
 	default int refreshInterval()
 	{
 		return 30;
+	}
+
+	enum FavouriteOrder
+	{
+		LOWEST_PING("Lowest ping first"),
+		FEWEST_PLAYERS("Fewest players first"),
+		BOTH("Both (ping and players)");
+
+		private final String label;
+
+		FavouriteOrder(String label)
+		{
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 
 	enum OverlaySize
@@ -442,7 +462,8 @@ public interface PlayerCountConfig extends Config
 		OFF("Off"),
 		QUIETEST("Quietest"),
 		BUSIEST("Busiest"),
-		LOWEST_PING("Lowest ping");
+		LOWEST_PING("Lowest ping"),
+		FAVOURITES("Favourites");
 
 		private final String label;
 
