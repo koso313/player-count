@@ -50,8 +50,8 @@ history.
 
 Suggests a world and hops you there from a hotkey, the overlay's right-click menu, or the sidebar.
 
-- Find the **quietest**, **busiest** or **lowest ping** world, cycle through your **favourites**, or
-  turn the finder **off**.
+- Find the **quietest**, **busiest** or **lowest ping** world, cycle through **themed worlds**
+  (your favourites, a skill-total level, or an activity), or turn the finder **off**.
 - **Themed worlds**: pick an activity from a dropdown (Wintertodt, Tempoross, Guardians of the Rift,
   Trade, Nex, ToA, Soul Wars, House party, each skill-total level and every other themed world) and the finder rotates through
   every world running it, busiest first, lowest ping first, or both. The sidebar has the same Theme
@@ -63,9 +63,10 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
   warnings off.
 
   ![Risky world warning](docs/overlay-warning.png)
-- **Favourites**: list worlds in the settings (`302, 330, 420`) or star them in the sidebar. Order them
-  by **lowest ping**, **fewest players**, or **both** weighed together. **Next world** cycles through
-  them in that order and starts over after the last one. A **gold star** beside your world in the
+- **Favourites**: the first theme. List worlds in the settings (`302, 330, 420`) or star them in the
+  sidebar. One **Order** setting covers favourites and themes: busiest, quietest, lowest ping, busy +
+  low ping, or quiet + low ping. **Next world** cycles through them in that order and starts over
+  after the last one. A **gold star** beside your world in the
   overlay means you're on a favourite.
 - Filters: membership, region, **max ping**, and skill-total worlds you have the level for.
 - **Skip recent worlds** you were on in the last X minutes.

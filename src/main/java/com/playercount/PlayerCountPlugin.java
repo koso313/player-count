@@ -959,27 +959,20 @@ public class PlayerCountPlugin extends Plugin
 			case THEMED:
 				switch (config.themedOrder())
 				{
+					case QUIETEST:
+						mode = WorldStats.Mode.THEMED_QUIETEST;
+						break;
 					case LOWEST_PING:
 						mode = WorldStats.Mode.THEMED_BY_PING;
 						break;
 					case BOTH:
 						mode = WorldStats.Mode.THEMED_BALANCED;
 						break;
+					case QUIET_AND_FAST:
+						mode = WorldStats.Mode.THEMED_QUIET_BALANCED;
+						break;
 					default:
 						mode = WorldStats.Mode.THEMED_BUSIEST;
-				}
-				break;
-			case FAVOURITES:
-				switch (config.favouriteOrder())
-				{
-					case FEWEST_PLAYERS:
-						mode = WorldStats.Mode.FAVOURITES_BY_PLAYERS;
-						break;
-					case BOTH:
-						mode = WorldStats.Mode.FAVOURITES_BALANCED;
-						break;
-					default:
-						mode = WorldStats.Mode.FAVOURITES_BY_PING;
 				}
 				break;
 			default:
@@ -1114,7 +1107,7 @@ public class PlayerCountPlugin extends Plugin
 			}
 			return "No open " + config.theme() + " worlds right now match your finder settings.";
 		}
-		if (config.finderMode() == PlayerCountConfig.FinderMode.FAVOURITES && favorites.isEmpty())
+		if (config.finderMode() == PlayerCountConfig.FinderMode.THEMED && config.theme() == WorldTheme.FAVOURITES && favorites.isEmpty())
 		{
 			return "You have no favourite worlds yet. Add some under World finder > Favourite worlds, or star them in the sidebar.";
 		}

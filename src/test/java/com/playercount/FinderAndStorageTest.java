@@ -74,11 +74,11 @@ public class FinderAndStorageTest
 	{
 		java.util.Set<Integer> favs = new HashSet<>(Arrays.asList(1, 2, 4));
 		Map<Integer, Integer> pings = map(1, 30, 4, 80); // world 2 not pinged yet
-		WorldStats.Criteria byPing = base().favorites(favs).pings(pings).mode(WorldStats.Mode.FAVOURITES_BY_PING).build();
+		WorldStats.Criteria byPing = base().favorites(favs).pings(pings).theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_BY_PING).build();
 		assertEquals(Arrays.asList(1, 4, 2), ids(WorldStats.rank(WORLDS, byPing))); // unknown ping last, not dropped
-		WorldStats.Criteria byPlayers = base().favorites(favs).pings(pings).mode(WorldStats.Mode.FAVOURITES_BY_PLAYERS).build();
+		WorldStats.Criteria byPlayers = base().favorites(favs).pings(pings).theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_QUIETEST).build();
 		assertEquals(Arrays.asList(2, 4, 1), ids(WorldStats.rank(WORLDS, byPlayers)));
-		assertNull(WorldStats.pick(WORLDS, base().mode(WorldStats.Mode.FAVOURITES_BY_PING).build())); // no favourites
+		assertNull(WorldStats.pick(WORLDS, base().theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_BY_PING).build())); // no favourites
 	}
 
 	@Test
@@ -87,7 +87,7 @@ public class FinderAndStorageTest
 		// 1: 300 players, 30ms   2: 100 players, 120ms   4: 200 players, 40ms
 		// scaled: 1 = 1.0 + 0.25 = 1.25   2 = 0.33 + 1.0 = 1.33   4 = 0.67 + 0.33 = 1.0
 		java.util.Set<Integer> favs = new HashSet<>(Arrays.asList(1, 2, 4));
-		WorldStats.Criteria both = base().favorites(favs).pings(map(1, 30, 2, 120, 4, 40)).mode(WorldStats.Mode.FAVOURITES_BALANCED).build();
+		WorldStats.Criteria both = base().favorites(favs).pings(map(1, 30, 2, 120, 4, 40)).theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_QUIET_BALANCED).build();
 		assertEquals(Arrays.asList(4, 1, 2), ids(WorldStats.rank(WORLDS, both)));
 	}
 
@@ -176,6 +176,27 @@ public class FinderAndStorageTest
 	}
 
 	@Test
+	public void themesListFavouritesThenTotalsDescendingThenAToZ()
+	{
+		WorldTheme[] all = WorldTheme.values();
+		assertEquals(WorldTheme.FAVOURITES, all[0]);
+		int i = 1;
+		int last = Integer.MAX_VALUE;
+		while (all[i].requiredTotal() > 0)
+		{
+			assertTrue(all[i].requiredTotal() < last);
+			last = all[i].requiredTotal();
+			i++;
+		}
+		assertEquals(WorldTheme.SKILL_TOTAL, all[i++]);
+		for (; i + 1 < all.length; i++)
+		{
+			assertTrue(all[i] + " should come before " + all[i + 1],
+				all[i].toString().compareToIgnoreCase(all[i + 1].toString()) < 0);
+		}
+	}
+
+	@Test
 	public void everyThemeMatchesAtLeastOneLiveWorld() throws java.io.IOException
 	{
 		// Guards against typos in theme terms: the sample is a real world list from 2026-11-11.
@@ -194,6 +215,7 @@ public class FinderAndStorageTest
 		}
 		// A few are seasonal or rotate; everything else should be present
 		unseen.remove(WorldTheme.LEAGUES);
+		unseen.remove(WorldTheme.FAVOURITES); // not an activity
 		assertTrue("Themes with no matching world: " + unseen, unseen.isEmpty());
 	}
 

@@ -477,8 +477,6 @@ class PlayerCountOverlay extends Overlay
 				return "Busy";
 			case LOWEST_PING:
 				return "Fast";
-			case FAVOURITES:
-				return "Fav";
 			case THEMED:
 				return "Theme";
 			default:

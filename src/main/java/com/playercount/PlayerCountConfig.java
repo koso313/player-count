@@ -204,31 +204,26 @@ public interface PlayerCountConfig extends Config
 
 	// ---- World finder ----
 
-	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for, or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full (Themed worlds is the exception: it can suggest any world whose activity matches, with a red warning on risky ones).", section = finderSection, position = 0)
+	@ConfigItem(keyName = "finderMode", name = "Find", description = "What the world finder looks for (Themed worlds also covers your favourites), or Off to disable it. It never suggests PvP, high-risk, Bounty Hunter, PvP Arena, Deadman, seasonal/Leagues, beta, tournament, Last Man Standing, speedrun or fresh-start worlds, or worlds that are nearly full (Themed worlds is the exception: it can suggest any world whose activity matches, with a red warning on risky ones).", section = finderSection, position = 0)
 	default FinderMode finderMode()
 	{
 		return FinderMode.QUIETEST;
 	}
 
-	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420. Used by Find: Favourites, which cycles through them. Starring worlds in the sidebar edits this list too.", section = finderSection, position = 1)
-	default String favoriteWorlds()
-	{
-		return "";
-	}
 
-	@ConfigItem(keyName = "favouriteOrder", name = "Favourites order", description = "For Find: Favourites, which favourite comes first (and the order the Next world hotkey cycles through them). Both weighs ping and player count equally.", section = finderSection, position = 2)
-	default FavouriteOrder favouriteOrder()
-	{
-		return FavouriteOrder.LOWEST_PING;
-	}
-
-	@ConfigItem(keyName = "theme", name = "Theme", description = "For Find: Themed worlds. Pick an activity and the finder rotates through every world running it (Next world cycles them). Risky ones such as PvP and Deadman are listed last and warned in red.", section = finderSection, position = 3)
+	@ConfigItem(keyName = "theme", name = "Theme", description = "For Find: Themed worlds. Your favourites, a skill-total level, or an activity; the finder rotates through every matching world (Next world cycles them). Risky worlds are warned in red or orange.", section = finderSection, position = 1)
 	default WorldTheme theme()
 	{
 		return WorldTheme.WINTERTODT;
 	}
 
-	@ConfigItem(keyName = "themedOrder", name = "Themed order", description = "For Find: Themed worlds, which matching world comes first (and the order Next world rotates through them). Both prefers busy, low-ping worlds.", section = finderSection, position = 4)
+	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites. Starring worlds in the sidebar edits this list too.", section = finderSection, position = 2)
+	default String favoriteWorlds()
+	{
+		return "";
+	}
+
+	@ConfigItem(keyName = "themedOrder", name = "Order", description = "For Find: Themed worlds (including Favourites), which world comes first and the order Next world rotates through them.", section = finderSection, position = 3)
 	default ThemedOrder themedOrder()
 	{
 		return ThemedOrder.BUSIEST;
@@ -388,32 +383,14 @@ public interface PlayerCountConfig extends Config
 	enum ThemedOrder
 	{
 		BUSIEST("Busiest first"),
+		QUIETEST("Quietest first"),
 		LOWEST_PING("Lowest ping first"),
-		BOTH("Both (busy and low ping)");
+		BOTH("Busy + low ping"),
+		QUIET_AND_FAST("Quiet + low ping");
 
 		private final String label;
 
 		ThemedOrder(String label)
-		{
-			this.label = label;
-		}
-
-		@Override
-		public String toString()
-		{
-			return label;
-		}
-	}
-
-	enum FavouriteOrder
-	{
-		LOWEST_PING("Lowest ping first"),
-		FEWEST_PLAYERS("Fewest players first"),
-		BOTH("Both (ping and players)");
-
-		private final String label;
-
-		FavouriteOrder(String label)
 		{
 			this.label = label;
 		}
@@ -529,7 +506,6 @@ public interface PlayerCountConfig extends Config
 		QUIETEST("Quietest"),
 		BUSIEST("Busiest"),
 		LOWEST_PING("Lowest ping"),
-		FAVOURITES("Favourites"),
 		THEMED("Themed worlds");
 
 		private final String label;

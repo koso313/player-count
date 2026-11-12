@@ -153,7 +153,6 @@ class WorldListPanel extends PluginPanel
 	private final JComboBox<String> region = new JComboBox<>();
 	private final JComboBox<Sort> sort = new JComboBox<>(Sort.values());
 	private final JComboBox<Object> theme = new JComboBox<>();
-	private final JCheckBox favouritesOnly = checkbox("Favourites", false);
 	private final JCheckBox hideSpecial = checkbox("Hide PvP", true);
 	private final JLabel summary = label(FontManager.getRunescapeSmallFont(), SUBTLE);
 
@@ -363,7 +362,6 @@ class WorldListPanel extends PluginPanel
 
 		JPanel checks = new JPanel(new GridLayout(1, 2, 6, 0));
 		checks.setOpaque(false);
-		checks.add(favouritesOnly);
 		checks.add(hideSpecial);
 		p.add(checks);
 		p.add(summary);
@@ -392,9 +390,7 @@ class WorldListPanel extends PluginPanel
 		region.addActionListener(e -> rebuild());
 		sort.addActionListener(e -> rebuild());
 		theme.addActionListener(e -> rebuild());
-		favouritesOnly.setToolTipText("Only show starred worlds");
 		hideSpecial.setToolTipText("Hide PvP, Deadman, seasonal and other special worlds");
-		favouritesOnly.addActionListener(e -> rebuild());
 		hideSpecial.addActionListener(e -> rebuild());
 		return p;
 	}
@@ -515,15 +511,13 @@ class WorldListPanel extends PluginPanel
 			{
 				continue;
 			}
-			if (theme.getSelectedItem() instanceof WorldTheme && !((WorldTheme) theme.getSelectedItem()).matches(w))
+			Object pickedTheme = theme.getSelectedItem();
+			if (pickedTheme == WorldTheme.FAVOURITES ? !s.getFavorites().contains(w.getId())
+				: pickedTheme instanceof WorldTheme && !((WorldTheme) pickedTheme).matches(w))
 			{
 				continue;
 			}
 			if (hideSpecial.isSelected() && WorldStats.isSpecial(w) && !(theme.getSelectedItem() instanceof WorldTheme))
-			{
-				continue;
-			}
-			if (favouritesOnly.isSelected() && !s.getFavorites().contains(w.getId()))
 			{
 				continue;
 			}

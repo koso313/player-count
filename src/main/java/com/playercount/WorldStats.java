@@ -96,23 +96,22 @@ final class WorldStats
 		QUIETEST,
 		BUSIEST,
 		LOWEST_PING,
-		/** Only favourites, lowest ping first (unknown ping last). */
-		FAVOURITES_BY_PING,
-		/** Only favourites, fewest players first. */
-		FAVOURITES_BY_PLAYERS,
-		/** Only favourites, ping and players weighed equally (each scaled against the other favourites). */
-		FAVOURITES_BALANCED,
 		/** Worlds whose activity matches a theme, busiest first. */
 		THEMED_BUSIEST,
 		/** Themed, lowest ping first. */
 		THEMED_BY_PING,
 		/** Themed, busy and low ping weighed equally. */
-		THEMED_BALANCED
+		THEMED_BALANCED,
+		/** Themed, fewest players first. */
+		THEMED_QUIETEST,
+		/** Themed, quiet and low ping weighed equally. */
+		THEMED_QUIET_BALANCED
 	}
 
 	static boolean isThemed(Mode m)
 	{
-		return m == Mode.THEMED_BUSIEST || m == Mode.THEMED_BY_PING || m == Mode.THEMED_BALANCED;
+		return m == Mode.THEMED_BUSIEST || m == Mode.THEMED_BY_PING || m == Mode.THEMED_BALANCED
+			|| m == Mode.THEMED_QUIETEST || m == Mode.THEMED_QUIET_BALANCED;
 	}
 
 
@@ -172,7 +171,8 @@ final class WorldStats
 			return false;
 		}
 		boolean themed = isThemed(c.getMode());
-		if (themed && (c.getTheme() == null || !c.getTheme().matches(w)))
+		boolean favourites = c.getTheme() == WorldTheme.FAVOURITES;
+		if (themed && (c.getTheme() == null || (favourites ? !c.getFavorites().contains(w.getId()) : !c.getTheme().matches(w))))
 		{
 			return false;
 		}
@@ -186,12 +186,6 @@ final class WorldStats
 			return false;
 		}
 		if (c.getRegion() != null && w.getRegion() != c.getRegion())
-		{
-			return false;
-		}
-		boolean favouritesMode = c.getMode() == Mode.FAVOURITES_BY_PING || c.getMode() == Mode.FAVOURITES_BY_PLAYERS
-			|| c.getMode() == Mode.FAVOURITES_BALANCED;
-		if (favouritesMode && !c.getFavorites().contains(w.getId()))
 		{
 			return false;
 		}
@@ -219,19 +213,18 @@ final class WorldStats
 				order = Comparator.comparingInt(World::getPlayers).reversed();
 				break;
 			case LOWEST_PING:
-			case FAVOURITES_BY_PING:
 			case THEMED_BY_PING:
 				order = Comparator.<World>comparingInt(w -> unknownLast(c.getPings().getOrDefault(w.getId(), -1)))
 					.thenComparingInt(World::getPlayers);
 				break;
-			case FAVOURITES_BY_PLAYERS:
+			case THEMED_QUIETEST:
 				order = Comparator.comparingInt(World::getPlayers);
 				break;
 			default:
 				order = Comparator.comparingDouble(w -> quietScore(w, c));
 		}
 		List<World> eligible = worlds.stream().filter(w -> eligible(w, c)).collect(Collectors.toList());
-		if (c.getMode() == Mode.FAVOURITES_BALANCED)
+		if (c.getMode() == Mode.THEMED_QUIET_BALANCED)
 		{
 			order = balanced(eligible, c.getPings(), false);
 		}
