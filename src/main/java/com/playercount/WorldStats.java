@@ -87,9 +87,8 @@ final class WorldStats
 		@Builder.Default
 		Map<Integer, Integer> usual = Collections.emptyMap();
 		boolean preferUsual;
-		/** For THEMED_* modes: activity texts to match (case-insensitive, contains). */
-		@Builder.Default
-		List<String> themes = Collections.emptyList();
+		/** For THEMED_* modes: the activity to match. */
+		WorldTheme theme;
 	}
 
 	enum Mode
@@ -116,24 +115,6 @@ final class WorldStats
 		return m == Mode.THEMED_BUSIEST || m == Mode.THEMED_BY_PING || m == Mode.THEMED_BALANCED;
 	}
 
-	/** True if the world's activity contains any of the themes. */
-	static boolean matchesTheme(World w, List<String> themes)
-	{
-		String activity = w.getActivity() == null ? "" : w.getActivity().toLowerCase(Locale.ROOT);
-		if (activity.isEmpty() || "-".equals(activity))
-		{
-			return false;
-		}
-		for (String t : themes)
-		{
-			String needle = t.trim().toLowerCase(Locale.ROOT);
-			if (!needle.isEmpty() && activity.contains(needle))
-			{
-				return true;
-			}
-		}
-		return false;
-	}
 
 	static Totals totals(List<World> worlds)
 	{
@@ -191,7 +172,7 @@ final class WorldStats
 			return false;
 		}
 		boolean themed = isThemed(c.getMode());
-		if (themed && !matchesTheme(w, c.getThemes()))
+		if (themed && (c.getTheme() == null || !c.getTheme().matches(w)))
 		{
 			return false;
 		}

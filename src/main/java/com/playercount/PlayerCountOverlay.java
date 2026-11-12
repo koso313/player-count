@@ -349,7 +349,9 @@ class PlayerCountOverlay extends Overlay
 		if (config.showSuggestion() && config.finderMode() != PlayerCountConfig.FinderMode.OFF)
 		{
 			World s = plugin.getSuggestion();
-			String label = mini ? shortFinder() : config.finderMode().toString();
+			String label = config.finderMode() == PlayerCountConfig.FinderMode.THEMED
+				? (mini ? config.theme().shortLabel() : config.theme().toString())
+				: (mini ? shortFinder() : config.finderMode().toString());
 			if (s == null)
 			{
 				items.add(OverlayLayout.Item.line(label).add("none", MUTED));

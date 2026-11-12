@@ -150,6 +150,7 @@ class WorldListPanel extends PluginPanel
 	private final JComboBox<String> membership = new JComboBox<>(new String[]{"All worlds", "Members", "Free-to-play"});
 	private final JComboBox<String> region = new JComboBox<>();
 	private final JComboBox<Sort> sort = new JComboBox<>(Sort.values());
+	private final JComboBox<Object> theme = new JComboBox<>();
 	private final JCheckBox favouritesOnly = checkbox("Favourites", false);
 	private final JCheckBox hideSpecial = checkbox("Hide PvP", true);
 	private final JLabel summary = label(FontManager.getRunescapeSmallFont(), SUBTLE);
@@ -330,6 +331,18 @@ class WorldListPanel extends PluginPanel
 		combos.add(region);
 		p.add(combos);
 
+		theme.addItem("All activities");
+		for (WorldTheme t : WorldTheme.values())
+		{
+			theme.addItem(t);
+		}
+		theme.setToolTipText("Show only worlds running this activity");
+		JPanel themeRow = new JPanel(new BorderLayout(6, 0));
+		themeRow.setOpaque(false);
+		themeRow.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "Theme"), BorderLayout.WEST);
+		themeRow.add(theme, BorderLayout.CENTER);
+		p.add(themeRow);
+
 		JPanel sortRow = new JPanel(new BorderLayout(6, 0));
 		sortRow.setOpaque(false);
 		sortRow.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "Sort"), BorderLayout.WEST);
@@ -366,6 +379,7 @@ class WorldListPanel extends PluginPanel
 		membership.addActionListener(e -> rebuild());
 		region.addActionListener(e -> rebuild());
 		sort.addActionListener(e -> rebuild());
+		theme.addActionListener(e -> rebuild());
 		favouritesOnly.setToolTipText("Only show starred worlds");
 		hideSpecial.setToolTipText("Hide PvP, Deadman, seasonal and other special worlds");
 		favouritesOnly.addActionListener(e -> rebuild());
@@ -483,7 +497,11 @@ class WorldListPanel extends PluginPanel
 			{
 				continue;
 			}
-			if (hideSpecial.isSelected() && WorldStats.isSpecial(w))
+			if (theme.getSelectedItem() instanceof WorldTheme && !((WorldTheme) theme.getSelectedItem()).matches(w))
+			{
+				continue;
+			}
+			if (hideSpecial.isSelected() && WorldStats.isSpecial(w) && !(theme.getSelectedItem() instanceof WorldTheme))
 			{
 				continue;
 			}

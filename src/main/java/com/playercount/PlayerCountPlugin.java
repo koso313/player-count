@@ -992,7 +992,7 @@ public class PlayerCountPlugin extends Plugin
 			.favorites(favorites)
 			.usual(config.preferUsual() ? usage.usualAll(Instant.now()) : Collections.emptyMap())
 			.preferUsual(config.preferUsual())
-			.themes(themes())
+			.theme(config.theme())
 			.build();
 	}
 
@@ -1094,24 +1094,11 @@ public class PlayerCountPlugin extends Plugin
 
 	// ---- Favourites ----
 
-	/** The Themes setting split into terms. */
-	private List<String> themes()
-	{
-		String raw = config.themedWorlds();
-		if (raw == null || raw.trim().isEmpty())
-		{
-			return Collections.emptyList();
-		}
-		return java.util.Arrays.stream(raw.split(",")).map(String::trim).filter(t -> !t.isEmpty()).collect(Collectors.toList());
-	}
-
 	private String noMatchMessage()
 	{
 		if (config.finderMode() == PlayerCountConfig.FinderMode.THEMED)
 		{
-			return themes().isEmpty()
-				? "Add some themes first, under World finder > Themes (e.g. Wintertodt, Tempoross)."
-				: "No open world matches your themes (" + String.join(", ", themes()) + "). The sidebar's search shows what activities exist.";
+			return "No open " + config.theme() + " worlds right now match your finder settings.";
 		}
 		if (config.finderMode() == PlayerCountConfig.FinderMode.FAVOURITES && favorites.isEmpty())
 		{
@@ -1218,7 +1205,7 @@ public class PlayerCountPlugin extends Plugin
 			.total(t == null ? -1 : t.getTotal())
 			.totalChange(totalChange())
 			.suggestion(suggestion)
-			.finderLabel(config.finderMode().toString())
+			.finderLabel(config.finderMode() == PlayerCountConfig.FinderMode.THEMED ? config.theme().toString() : config.finderMode().toString())
 			.finderOff(config.finderMode() == PlayerCountConfig.FinderMode.OFF)
 			.warnRisky(config.warnRisky())
 			.updated(getLastUpdate())

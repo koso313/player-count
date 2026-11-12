@@ -92,28 +92,52 @@ public class FinderAndStorageTest
 	}
 
 	@Test
-	public void themedWorldsMatchActivitiesIncludingRiskyOnes()
+	public void themedWorldsRotateThroughTheChosenActivity()
 	{
 		List<World> worlds = Arrays.asList(
 			themed(307, 400, "Wintertodt"),
 			themed(309, 900, "Wintertodt"),
+			themed(395, 600, "Hardcore World - Wintertodt"),
 			themed(320, 150, "Tempoross"),
 			themed(330, 50, "House Party, Gilded Altar"),
-			themed(319, 300, "Last Man Standing", WorldType.LAST_MAN_STANDING),
-			themed(325, 500, "PvP world - Wintertodt fans", WorldType.PVP));
-		java.util.List<String> themes = Arrays.asList(" wintertodt", "TEMPOROSS", "last man");
-		List<World> busiest = WorldStats.rank(worlds, base().themes(themes).mode(WorldStats.Mode.THEMED_BUSIEST).build());
-		assertEquals(Arrays.asList(309, 325, 307, 319, 320), ids(busiest)); // risky worlds allowed in Themed (warned)
-		assertEquals("PvP", WorldStats.risk(worlds.get(5)));
-		assertNull(WorldStats.risk(worlds.get(4))); // LMS is a safe minigame
-		assertNull(WorldStats.risk(worlds.get(0)));
-		Map<Integer, Integer> pings = map(307, 20, 309, 200, 320, 40, 319, 60);
-		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BY_PING).build()).getId());
-		// Both: 307 = 0.1 ping + 0.56 quietness = 0.66 beats 309 = 1.0 + 0 = 1.0
-		assertEquals(307, WorldStats.pick(worlds, base().themes(themes).pings(pings).mode(WorldStats.Mode.THEMED_BALANCED).build()).getId());
-		assertNull(WorldStats.pick(worlds, base().mode(WorldStats.Mode.THEMED_BUSIEST).build())); // no themes
-		// Outside Themed mode special worlds are still never suggested
+			themed(319, 300, "LMS Casual", WorldType.LAST_MAN_STANDING),
+			themed(325, 500, "PvP World", WorldType.PVP));
+		WorldStats.Criteria.CriteriaBuilder wt = base().theme(WorldTheme.WINTERTODT).mode(WorldStats.Mode.THEMED_BUSIEST);
+		assertEquals(Arrays.asList(309, 307), ids(WorldStats.rank(worlds, wt.build()))); // hardcore world skipped
+		Map<Integer, Integer> pings = map(307, 20, 309, 200);
+		assertEquals(307, WorldStats.pick(worlds, wt.pings(pings).mode(WorldStats.Mode.THEMED_BY_PING).build()).getId());
+		assertEquals(307, WorldStats.pick(worlds, wt.pings(pings).mode(WorldStats.Mode.THEMED_BALANCED).build()).getId());
+		assertEquals(319, WorldStats.pick(worlds, base().theme(WorldTheme.LAST_MAN_STANDING).mode(WorldStats.Mode.THEMED_BUSIEST).build()).getId());
+		assertEquals(330, WorldStats.pick(worlds, base().theme(WorldTheme.HOUSE_PARTY).mode(WorldStats.Mode.THEMED_BUSIEST).build()).getId());
+		// Risky worlds only through their theme, and flagged
+		World pvp = WorldStats.pick(worlds, base().theme(WorldTheme.PVP).mode(WorldStats.Mode.THEMED_BUSIEST).build());
+		assertEquals(325, pvp.getId());
+		assertEquals("PvP", WorldStats.risk(pvp));
+		assertNull(WorldStats.risk(worlds.get(5))); // LMS is a safe minigame
 		assertTrue(WorldStats.rank(worlds, base().build()).stream().noneMatch(w -> w.getId() == 319 || w.getId() == 325));
+		assertNull(WorldStats.pick(worlds, base().mode(WorldStats.Mode.THEMED_BUSIEST).build())); // no theme chosen
+	}
+
+	@Test
+	public void everyThemeMatchesAtLeastOneLiveWorld() throws java.io.IOException
+	{
+		// Guards against typos in theme terms: the sample is a real world list from 2026-11-11.
+		List<World> live;
+		try (java.io.InputStream in = getClass().getResourceAsStream("slr-sample.bin"))
+		{
+			live = SlrParser.parse(in.readAllBytes());
+		}
+		java.util.Set<WorldTheme> unseen = EnumSet.noneOf(WorldTheme.class);
+		for (WorldTheme t : WorldTheme.values())
+		{
+			if (live.stream().noneMatch(t::matches))
+			{
+				unseen.add(t);
+			}
+		}
+		// A few are seasonal or rotate; everything else should be present
+		unseen.remove(WorldTheme.LEAGUES);
+		assertTrue("Themes with no matching world: " + unseen, unseen.isEmpty());
 	}
 
 	private static World themed(int id, int players, String activity, WorldType... extra)

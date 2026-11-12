@@ -222,10 +222,10 @@ public interface PlayerCountConfig extends Config
 		return FavouriteOrder.LOWEST_PING;
 	}
 
-	@ConfigItem(keyName = "themedWorlds", name = "Themes", description = "For Find: Themed worlds. Comma-separated activities to look for, e.g. Wintertodt, Tempoross, Trade, House Party. Matches any world whose activity contains the text, including PvP, Deadman and Leagues worlds (warned in red). The sidebar's search shows what activities exist.", section = finderSection, position = 3)
-	default String themedWorlds()
+	@ConfigItem(keyName = "theme", name = "Theme", description = "For Find: Themed worlds. Pick an activity and the finder rotates through every world running it (Next world cycles them). Risky ones such as PvP and Deadman are listed last and warned in red.", section = finderSection, position = 3)
+	default WorldTheme theme()
 	{
-		return "";
+		return WorldTheme.WINTERTODT;
 	}
 
 	@ConfigItem(keyName = "themedOrder", name = "Themed order", description = "For Find: Themed worlds, which matching world comes first (and the order Next world rotates through them). Both prefers busy, low-ping worlds.", section = finderSection, position = 4)

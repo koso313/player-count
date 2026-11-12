@@ -47,8 +47,10 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 
 - Find the **quietest**, **busiest** or **lowest ping** world, cycle through your **favourites**, or
   turn the finder **off**.
-- **Themed worlds**: list activities (`Wintertodt, Tempoross, Trade`) and the finder rotates through
-  every world running them, busiest first, lowest ping first, or both. Themed is the only mode that can
+- **Themed worlds**: pick an activity from a dropdown (Wintertodt, Tempoross, Guardians of the Rift,
+  Trade, Nex, ToA, Soul Wars, House party and every other themed world) and the finder rotates through
+  every world running it, busiest first, lowest ping first, or both. The sidebar has the same Theme
+  filter. Themed is the only mode that can
   suggest PvP, high-risk, Bounty Hunter, Deadman, Leagues, beta, speedrun or fresh-start worlds. When it
   does, the world **glows red** in the overlay and sidebar and chat warns you as you hop. You can turn
   the warning off.
