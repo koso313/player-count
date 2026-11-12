@@ -1,0 +1,142 @@
+package com.playercount;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldRegion;
+import net.runelite.http.api.worlds.WorldType;
+import org.junit.Test;
+
+public class FinderAndStorageTest
+{
+	private static World world(int id, int players)
+	{
+		return World.builder().id(id).players(players).region(WorldRegion.UNITED_KINGDOM).activity("-")
+			.address("a").types(EnumSet.of(WorldType.MEMBERS)).build();
+	}
+
+	private static final List<World> WORLDS = Arrays.asList(world(1, 300), world(2, 100), world(3, 50), world(4, 200));
+
+	private static Map<Integer, Integer> map(int... kv)
+	{
+		Map<Integer, Integer> m = new HashMap<>();
+		for (int i = 0; i < kv.length; i += 2)
+		{
+			m.put(kv[i], kv[i + 1]);
+		}
+		return m;
+	}
+
+	private static WorldStats.Criteria.CriteriaBuilder base()
+	{
+		return WorldStats.Criteria.builder().currentWorld(99).members(true).totalLevel(2000);
+	}
+
+	private static List<Integer> ids(List<World> worlds)
+	{
+		return worlds.stream().map(World::getId).collect(Collectors.toList());
+	}
+
+	@Test
+	public void lowestPingSkipsUnknownAndBreaksTiesByPlayers()
+	{
+		Map<Integer, Integer> pings = map(1, 20, 2, 40, 4, 20); // world 3 unknown
+		List<World> ranked = WorldStats.rank(WORLDS, base().mode(WorldStats.Mode.LOWEST_PING).pings(pings).build());
+		assertEquals(Arrays.asList(4, 1, 2), ids(ranked));
+	}
+
+	@Test
+	public void maxPingFiltersQuietestToo()
+	{
+		Map<Integer, Integer> pings = map(1, 20, 2, 140, 3, 200, 4, 60);
+		assertEquals(4, WorldStats.pick(WORLDS, base().pings(pings).maxPing(100).build()).getId());
+		assertEquals(3, WorldStats.pick(WORLDS, base().pings(pings).build()).getId()); // no limit
+	}
+
+	@Test
+	public void favouritesOnly()
+	{
+		WorldStats.Criteria c = base().favorites(new HashSet<>(Arrays.asList(1, 4))).favoritesOnly(true).build();
+		assertEquals(Arrays.asList(4, 1), ids(WorldStats.rank(WORLDS, c)));
+		assertNull(WorldStats.pick(WORLDS, base().favoritesOnly(true).build()));
+	}
+
+	@Test
+	public void preferUsualBlendsTypicalCount()
+	{
+		// World 3 is quiet now (50) but usually packed (1000); world 2 is usually quiet.
+		Map<Integer, Integer> usual = map(3, 1000, 2, 80);
+		assertEquals(3, WorldStats.pick(WORLDS, base().usual(usual).build()).getId());
+		assertEquals(2, WorldStats.pick(WORLDS, base().usual(usual).preferUsual(true).build()).getId());
+	}
+
+	@Test
+	public void usageStatsNeedSamplesAndSpacing() throws IOException
+	{
+		UsageStats u = new UsageStats();
+		Instant t = Instant.parse("2026-11-11T20:00:00Z");
+		u.add(t, WORLDS);
+		u.add(t.plusSeconds(60), Collections.singletonList(world(1, 900))); // too soon, ignored
+		assertEquals(-1, u.usual(1, t));
+		u.add(t.plusSeconds(UsageStats.SAMPLE_GAP_S), Collections.singletonList(world(1, 400)));
+		u.add(t.plusSeconds(2 * UsageStats.SAMPLE_GAP_S), Collections.singletonList(world(1, 500)));
+		assertEquals(400, u.usual(1, t));
+		assertEquals(-1, u.usual(1, t.plus(Duration.ofHours(1)))); // different hour
+
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		u.write(new DataOutputStream(bytes));
+		UsageStats copy = new UsageStats();
+		copy.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())));
+		assertEquals(400, copy.usual(1, t));
+		assertEquals(Collections.singletonMap(1, 400), copy.usualAll(t));
+	}
+
+	@Test
+	public void historySurvivesSaveAndDropsOldPoints() throws IOException
+	{
+		PopulationHistory h = new PopulationHistory();
+		Instant t = Instant.parse("2026-11-11T10:00:00Z");
+		h.add(t, WORLDS);
+		h.add(t.plus(Duration.ofHours(5)), WORLDS);
+
+		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+		h.write(new DataOutputStream(bytes));
+		PopulationHistory loaded = new PopulationHistory();
+		Instant later = t.plus(Duration.ofHours(7)); // first point is now over 6h old
+		loaded.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())), later);
+		List<PopulationHistory.Point> pts = loaded.series(later, Duration.ofHours(6), -1);
+		assertEquals(1, pts.size());
+		assertEquals(650, pts.get(0).getValue());
+		assertEquals(50, loaded.series(later, Duration.ofHours(6), 3).get(0).getValue());
+	}
+
+	@Test
+	public void favouritesParseIgnoresJunk()
+	{
+		assertEquals(new HashSet<>(Arrays.asList(302, 330)), PlayerCountPlugin.parseFavorites("302, x,330,,"));
+		assertTrue(PlayerCountPlugin.parseFavorites(null).isEmpty());
+	}
+
+	@Test
+	public void globeIconIsTheRequestedSize()
+	{
+		assertEquals(16, Icons.globe(16).getWidth());
+		assertEquals(48, Icons.globe(48).getHeight());
+	}
+}
