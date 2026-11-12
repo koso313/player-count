@@ -101,11 +101,11 @@ class WorldListPanel extends PluginPanel
 
 	private enum Sort
 	{
-		QUIETEST("Quietest"),
-		BUSIEST("Busiest"),
-		PING("Lowest ping"),
-		USUAL("Usually quiet"),
-		NUMBER("World number");
+		QUIETEST("Sort: quietest"),
+		BUSIEST("Sort: busiest"),
+		PING("Sort: lowest ping"),
+		USUAL("Sort: usually quiet"),
+		NUMBER("Sort: world number");
 
 		private final String label;
 
@@ -148,7 +148,23 @@ class WorldListPanel extends PluginPanel
 	private final JButton nextButton = button("Next world");
 
 	// Filters
-	private final JTextField search = new JTextField();
+	private final JTextField search = new JTextField()
+	{
+		@Override
+		protected void paintComponent(Graphics g)
+		{
+			super.paintComponent(g);
+			if (getText().isEmpty() && !isFocusOwner())
+			{
+				g.setColor(SUBTLE);
+				g.setFont(FontManager.getRunescapeSmallFont());
+				Insets in = getInsets();
+				g.drawString("Search world or activity", in.left, (getHeight() + g.getFontMetrics().getAscent()) / 2 - 1);
+			}
+		}
+	};
+	private final JButton filtersButton = button("Filters");
+	private final JPanel filtersPanel = new JPanel(new GridLayout(0, 1, 0, 4));
 	private final JComboBox<String> membership = new JComboBox<>(new String[]{"All worlds", "Members", "Free-to-play"});
 	private final JComboBox<String> region = new JComboBox<>();
 	private final JComboBox<Sort> sort = new JComboBox<>(Sort.values());
@@ -315,55 +331,79 @@ class WorldListPanel extends PluginPanel
 
 	private JComponent filters()
 	{
-		JPanel p = new JPanel(new GridLayout(0, 1, 0, 4));
+		JPanel p = new JPanel();
+		p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 		p.setOpaque(false);
 
+		// Search box with the Filters toggle beside it
 		search.setToolTipText("Search by world number or activity (e.g. 302, Wintertodt)");
 		search.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		search.setForeground(Color.WHITE);
 		search.setCaretColor(Color.WHITE);
 		search.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(ColorScheme.MEDIUM_GRAY_COLOR),
-			BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+			BorderFactory.createEmptyBorder(4, 5, 4, 5)));
+		search.addFocusListener(new java.awt.event.FocusAdapter()
+		{
+			@Override
+			public void focusGained(java.awt.event.FocusEvent e)
+			{
+				search.repaint();
+			}
+
+			@Override
+			public void focusLost(java.awt.event.FocusEvent e)
+			{
+				search.repaint();
+			}
+		});
+		filtersButton.setToolTipText("Membership, region, theme, sort and PvP filters");
+		filtersButton.addActionListener(e ->
+		{
+			filtersPanel.setVisible(!filtersPanel.isVisible());
+			revalidate();
+		});
 		JPanel searchRow = new JPanel(new BorderLayout(6, 0));
 		searchRow.setOpaque(false);
-		searchRow.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "Search"), BorderLayout.WEST);
 		searchRow.add(search, BorderLayout.CENTER);
+		searchRow.add(filtersButton, BorderLayout.EAST);
+		searchRow.setAlignmentX(LEFT_ALIGNMENT);
+		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, searchRow.getPreferredSize().height));
 		p.add(searchRow);
 
+		// Filters, hidden until asked for
 		region.addItem("All regions");
 		for (WorldRegion r : WorldRegion.values())
 		{
 			region.addItem(WorldStats.regionCode(r));
 		}
-		JPanel combos = new JPanel(new GridLayout(1, 2, 6, 0));
-		combos.setOpaque(false);
-		combos.add(membership);
-		combos.add(region);
-		p.add(combos);
-
 		theme.addItem("All activities");
 		for (WorldTheme t : WorldTheme.values())
 		{
 			theme.addItem(t);
 		}
-		theme.setToolTipText("Show only worlds running this activity");
-		JPanel themeRow = new JPanel(new BorderLayout(6, 0));
-		themeRow.setOpaque(false);
-		themeRow.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "Theme"), BorderLayout.WEST);
-		themeRow.add(theme, BorderLayout.CENTER);
-		p.add(themeRow);
+		membership.setToolTipText("Members or free-to-play worlds");
+		region.setToolTipText("Worlds in one region");
+		theme.setToolTipText("Only worlds running this activity (or your favourites)");
+		sort.setToolTipText("How the list is ordered (favourites stay on top)");
+		hideSpecial.setToolTipText("Hide PvP, Deadman, seasonal and other special worlds (a Theme shows them anyway)");
 
-		JPanel sortRow = new JPanel(new BorderLayout(6, 0));
-		sortRow.setOpaque(false);
-		sortRow.add(label(FontManager.getRunescapeSmallFont(), SUBTLE, "Sort"), BorderLayout.WEST);
-		sortRow.add(sort, BorderLayout.CENTER);
-		p.add(sortRow);
+		JPanel combos = new JPanel(new GridLayout(1, 2, 6, 0));
+		combos.setOpaque(false);
+		combos.add(membership);
+		combos.add(region);
+		filtersPanel.setOpaque(false);
+		filtersPanel.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+		filtersPanel.add(combos);
+		filtersPanel.add(theme);
+		filtersPanel.add(sort);
+		filtersPanel.add(hideSpecial);
+		filtersPanel.setVisible(false);
+		filtersPanel.setAlignmentX(LEFT_ALIGNMENT);
+		p.add(filtersPanel);
 
-		JPanel checks = new JPanel(new GridLayout(1, 2, 6, 0));
-		checks.setOpaque(false);
-		checks.add(hideSpecial);
-		p.add(checks);
+		summary.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+		summary.setAlignmentX(LEFT_ALIGNMENT);
 		p.add(summary);
 
 		search.getDocument().addDocumentListener(new DocumentListener()
@@ -390,9 +430,24 @@ class WorldListPanel extends PluginPanel
 		region.addActionListener(e -> rebuild());
 		sort.addActionListener(e -> rebuild());
 		theme.addActionListener(e -> rebuild());
-		hideSpecial.setToolTipText("Hide PvP, Deadman, seasonal and other special worlds");
 		hideSpecial.addActionListener(e -> rebuild());
 		return p;
+	}
+
+	/** Opens or closes the filter panel (also used for screenshots). */
+	void setFiltersOpen(boolean open)
+	{
+		filtersPanel.setVisible(open);
+		revalidate();
+	}
+
+	/** "Filters" or "Filters (2)" when some are narrowing the list (sort doesn't count). */
+	private void updateFiltersLabel()
+	{
+		int active = (membership.getSelectedIndex() > 0 ? 1 : 0) + (region.getSelectedIndex() > 0 ? 1 : 0)
+			+ (theme.getSelectedIndex() > 0 ? 1 : 0) + (hideSpecial.isSelected() ? 0 : 1);
+		filtersButton.setText(active == 0 ? "Filters" : "Filters (" + active + ")");
+		filtersButton.setForeground(active == 0 ? Color.WHITE : ColorScheme.BRAND_ORANGE);
 	}
 
 	private JPopupMenu popup(World w)
@@ -580,6 +635,7 @@ class WorldListPanel extends PluginPanel
 			}
 		}
 		summary.setText(String.format("%d worlds  |  %,d players", rows.size(), players));
+		updateFiltersLabel();
 		summary.setToolTipText("Double-click a world to hop, click its star to favourite, right-click for more");
 	}
 

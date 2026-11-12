@@ -79,15 +79,15 @@ Suggests a world and hops you there from a hotkey, the overlay's right-click men
 
 ## Sidebar
 
-![Sidebar world list](docs/sidebar.png)
+![Sidebar world list](docs/sidebar.png) ![Sidebar with filters open](docs/sidebar-filters.png)
 
 - A **world map** of glowing players at the top. Hover a region to see how many people are playing
   there.
 - Your world at a glance: players, change, activity, region, how busy it usually is, and ping.
 - **Hop to suggested** and **Next world** buttons.
 - Every world with live players, change, ping and its usual count at this hour.
-- Search by world number or activity, filter by membership and region, and sort by quietest, busiest,
-  lowest ping, usually quiet or world number.
+- **Search** by world number or activity. The **Filters** button opens membership, region, theme
+  (including Favourites), sort and Hide PvP, and shows how many filters are on, e.g. "Filters (2)".
 - **Favourites**: click the star to favourite a world; favourites stay at the top.
 - **Hop** button on the row you hover over, or double-click a world (or press Enter). Right-click for
   more options.

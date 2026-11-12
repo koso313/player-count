@@ -165,6 +165,7 @@ public class Showcase
 			.updated(Instant.now().minusSeconds(12))
 			.build();
 		ImageIO.write(sidebar(state), "png", new File(out, "sidebar.png"));
+		ImageIO.write(sidebar(state, true), "png", new File(out, "sidebar-filters.png"));
 
 		ImageIO.write(Icons.pluginIcon(48), "png", new File(out, "icon.png"));
 		System.out.println("Wrote screenshots to " + out.getAbsolutePath());
@@ -291,6 +292,11 @@ public class Showcase
 
 	private static BufferedImage sidebar(WorldListPanel.State state) throws Exception
 	{
+		return sidebar(state, false);
+	}
+
+	private static BufferedImage sidebar(WorldListPanel.State state, boolean filtersOpen) throws Exception
+	{
 		AtomicReference<BufferedImage> img = new AtomicReference<>();
 		SwingUtilities.invokeAndWait(() -> RuneLiteLAF.setup());
 		AtomicReference<WorldListPanel> panel = new AtomicReference<>();
@@ -336,6 +342,8 @@ public class Showcase
 		SwingUtilities.invokeAndWait(() ->
 		{
 			WorldListPanel p = panel.get();
+			frame.get().validate();
+			p.setFiltersOpen(filtersOpen);
 			frame.get().validate();
 			p.previewHover(4);
 			BufferedImage i = new BufferedImage(p.getWidth(), p.getHeight(), BufferedImage.TYPE_INT_ARGB);
