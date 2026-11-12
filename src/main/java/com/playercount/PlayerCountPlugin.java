@@ -219,6 +219,7 @@ public class PlayerCountPlugin extends Plugin
 	private final DataStore store = new DataStore(new File(RuneLite.RUNELITE_DIR, "player-count"));
 	/** Worlds the user starred. Read on any thread, replaced (not mutated) on change. */
 	private volatile Set<Integer> favorites = Collections.emptySet();
+	private final FavouritesGuard favouritesGuard = new FavouritesGuard();
 	private final Set<Integer> cycled = new HashSet<>();
 	private Instant lastCycle;
 	private Instant lastCombat;
@@ -255,8 +256,8 @@ public class PlayerCountPlugin extends Plugin
 	protected void startUp()
 	{
 		records = DailyRecords.parse(configManager.getConfiguration(PlayerCountConfig.GROUP, RECORDS_KEY));
+		migrateStars();
 		recomputeFavorites();
-		syncFavoritesBox();
 		Instant now = Instant.now();
 		store.load(HISTORY_FILE, in -> history6h.read(in, now));
 		store.load(USAGE_FILE, usage::read);
@@ -483,14 +484,16 @@ public class PlayerCountPlugin extends Plugin
 				startPing();
 			}
 		}
-		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()) || PlayerCountConfig.STARRED_KEY.equals(e.getKey()))
+		if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
 		{
-			recomputeFavorites();
-			// An open settings panel can write back an old box without the stars; put them back.
-			if (PlayerCountConfig.FAVORITES_KEY.equals(e.getKey()))
+			// An open settings panel can write back an old list; keep sidebar changes from the last minute.
+			Set<Integer> written = parseFavorites(config.favoriteWorlds());
+			Set<Integer> wanted = favouritesGuard.reconcile(written, Instant.now());
+			if (!wanted.equals(written))
 			{
-				syncFavoritesBox();
+				configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(wanted));
 			}
+			recomputeFavorites();
 		}
 		if (PlayerCountConfig.SIDEBAR_KEY.equals(e.getKey()))
 		{
@@ -1261,21 +1264,24 @@ public class PlayerCountPlugin extends Plugin
 	}
 
 	/** Favourites = worlds starred in the sidebar + worlds typed into Favourite worlds. */
+	/** Favourites are the Favourite worlds list (the sidebar edits it too). */
 	private void recomputeFavorites()
 	{
-		Set<Integer> all = new TreeSet<>(parseFavorites(config.starredWorlds()));
-		all.addAll(parseFavorites(config.favoriteWorlds()));
-		favorites = Collections.unmodifiableSet(all);
+		favorites = parseFavorites(config.favoriteWorlds());
 	}
 
-	/** Makes the Favourite worlds box list every favourite, so reopening the settings shows starred worlds. */
-	private void syncFavoritesBox()
+	/** An earlier build kept sidebar stars in a hidden list; fold them into Favourite worlds once. */
+	private void migrateStars()
 	{
-		String joined = join(favorites);
-		if (!joined.equals(join(parseFavorites(config.favoriteWorlds()))))
+		Set<Integer> starred = parseFavorites(config.starredWorlds());
+		if (starred.isEmpty())
 		{
-			configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, joined);
+			return;
 		}
+		Set<Integer> all = new TreeSet<>(parseFavorites(config.favoriteWorlds()));
+		all.addAll(starred);
+		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(all));
+		configManager.unsetConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.STARRED_KEY);
 	}
 
 	private static String join(Set<Integer> worlds)
@@ -1291,23 +1297,17 @@ public class PlayerCountPlugin extends Plugin
 	/** Adds or removes a favourite (sidebar star, favourites row, or its add box). */
 	void setFavorite(int world, boolean on)
 	{
-		Set<Integer> starred = new TreeSet<>(parseFavorites(config.starredWorlds()));
-		Set<Integer> typed = new TreeSet<>(parseFavorites(config.favoriteWorlds()));
-		if (!on)
+		Set<Integer> list = new TreeSet<>(parseFavorites(config.favoriteWorlds()));
+		if (on)
 		{
-			// Remove: drop it from both lists
-			starred.remove(world);
-			typed.remove(world);
+			list.add(world);
 		}
 		else
 		{
-			starred.add(world);
-			typed.add(world);
+			list.remove(world);
 		}
-		// Stars go in their own hidden setting (an open settings panel can't overwrite it); the visible box
-		// gets the full list so it shows the stars next time the settings are opened.
-		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.STARRED_KEY, join(starred));
-		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(typed));
+		favouritesGuard.sidebarChanged(world, on, Instant.now());
+		configManager.setConfiguration(PlayerCountConfig.GROUP, PlayerCountConfig.FAVORITES_KEY, join(list));
 		recomputeFavorites();
 		// RuneLite only writes settings to disk every few minutes or on exit; save stars straight away.
 		executor.execute(configManager::sendConfig);

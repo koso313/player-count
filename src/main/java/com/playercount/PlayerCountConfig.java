@@ -22,7 +22,7 @@ public interface PlayerCountConfig extends Config
 	String SIDEBAR_KEY = "showSidebar";
 	String SIZE_KEY = "overlaySizeOption";
 	String FAVORITES_KEY = "favoriteWorlds";
-	/** Worlds starred in the sidebar, kept apart from the text box so an open settings panel can't overwrite them. */
+	/** Sidebar stars from an earlier build, folded into Favourite worlds on start-up. */
 	String STARRED_KEY = "starredWorlds";
 
 	@ConfigSection(name = "Overlay", description = "How the overlay looks and when it hides", position = 0)
@@ -193,7 +193,7 @@ public interface PlayerCountConfig extends Config
 		return WorldTheme.WINTERTODT;
 	}
 
-	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites (the finder filters for membership, region and max ping don't apply to favourites). Worlds you star in the sidebar are added here too (reopen the settings to see new ones). To remove a starred world, unstar it in the sidebar.", section = finderSection, position = 2)
+	@ConfigItem(keyName = FAVORITES_KEY, name = "Favourite worlds", description = "Comma-separated world numbers, e.g. 302, 330, 420, for Theme: Favourites (the finder filters for membership, region and max ping don't apply to favourites). The sidebar's stars and Favourites row edit this list too (reopen the settings to see their changes); deleting a world here removes it there.", section = finderSection, position = 2)
 	default String favoriteWorlds()
 	{
 		return "";
