@@ -82,6 +82,21 @@ public class FinderAndStorageTest
 	}
 
 	@Test
+	public void favouritesIgnoreMembershipRegionAndPingFilters()
+	{
+		// On a members world with 'same as current', a free favourite (like 427) must still be suggested
+		World free427 = World.builder().id(427).players(46).region(WorldRegion.AUSTRALIA).activity("500 skill total")
+			.address("a").types(EnumSet.of(WorldType.SKILL_TOTAL)).build();
+		WorldStats.Criteria c = base().allowSkillTotal(true).members(true).region(WorldRegion.UNITED_KINGDOM).maxPing(50).pings(map(427, 240))
+			.favorites(new HashSet<>(Collections.singletonList(427))).theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_BUSIEST).build();
+		assertEquals(427, WorldStats.pick(Arrays.asList(free427), c).getId());
+		// ...but a skill total you don't have still keeps it out
+		WorldStats.Criteria low = base().totalLevel(400).allowSkillTotal(true)
+			.favorites(new HashSet<>(Collections.singletonList(427))).theme(WorldTheme.FAVOURITES).mode(WorldStats.Mode.THEMED_BUSIEST).build();
+		assertNull(WorldStats.pick(Arrays.asList(free427), low));
+	}
+
+	@Test
 	public void favouritesBothWeighsPingAndPlayers()
 	{
 		// 1: 300 players, 30ms   2: 100 players, 120ms   4: 200 players, 40ms

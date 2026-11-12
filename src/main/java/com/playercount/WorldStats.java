@@ -171,7 +171,7 @@ final class WorldStats
 			return false;
 		}
 		boolean themed = isThemed(c.getMode());
-		boolean favourites = c.getTheme() == WorldTheme.FAVOURITES;
+		boolean favourites = themed && c.getTheme() == WorldTheme.FAVOURITES;
 		if (themed && (c.getTheme() == null || (favourites ? !c.getFavorites().contains(w.getId()) : !c.getTheme().matches(w))))
 		{
 			return false;
@@ -181,22 +181,27 @@ final class WorldStats
 		{
 			return false;
 		}
-		if (w.getTypes().contains(WorldType.MEMBERS) != c.isMembers())
+		// Favourites are worlds you picked yourself, so the membership, region and max-ping filters don't apply
+		// (members can join free worlds). Skill totals and full worlds still do: you couldn't get in.
+		if (!favourites)
 		{
-			return false;
-		}
-		if (c.getRegion() != null && w.getRegion() != c.getRegion())
-		{
-			return false;
-		}
-		int ping = c.getPings().getOrDefault(w.getId(), -1);
-		if ((c.getMaxPing() > 0 || c.getMode() == Mode.LOWEST_PING) && ping < 0)
-		{
-			return false;
-		}
-		if (c.getMaxPing() > 0 && ping > c.getMaxPing())
-		{
-			return false;
+			if (w.getTypes().contains(WorldType.MEMBERS) != c.isMembers())
+			{
+				return false;
+			}
+			if (c.getRegion() != null && w.getRegion() != c.getRegion())
+			{
+				return false;
+			}
+			int ping = c.getPings().getOrDefault(w.getId(), -1);
+			if ((c.getMaxPing() > 0 || c.getMode() == Mode.LOWEST_PING) && ping < 0)
+			{
+				return false;
+			}
+			if (c.getMaxPing() > 0 && ping > c.getMaxPing())
+			{
+				return false;
+			}
 		}
 		int req = skillTotalRequirement(w);
 		return req == 0 || (c.isAllowSkillTotal() && c.getTotalLevel() >= req);
