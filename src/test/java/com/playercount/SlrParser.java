@@ -11,15 +11,13 @@ import net.runelite.http.api.worlds.WorldRegion;
 import net.runelite.http.api.worlds.WorldType;
 
 /**
- * Parses Jagex's live world list (slr.ws), the same file the in-game world switcher reads.
- * RuneLite's own copy of this list is cached for 10 minutes; this one isn't cached.
+ * Test helper: parses a saved copy of the game's world list (slr-sample.bin) into test data.
  *
  * Layout (big-endian): int length, ushort worldCount, then per world:
  * ushort id, int typeFlags, cstring address, cstring activity, ubyte location, short players.
  */
 final class SlrParser
 {
-	static final String URL = "https://www.runescape.com/g=oldscape/slr.ws?order=LPWM";
 
 	private static final Charset CP1252 = Charset.forName("windows-1252");
 

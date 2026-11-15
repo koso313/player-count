@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
@@ -22,7 +21,6 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.io.File;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -73,12 +71,6 @@ import net.runelite.client.util.WorldUtil;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldRegion;
 import net.runelite.http.api.worlds.WorldResult;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 @Slf4j
 @PluginDescriptor(
@@ -90,8 +82,8 @@ public class PlayerCountPlugin extends Plugin
 {
 	/** The +/- figures compare against the sample from about this long ago. */
 	static final Duration CHANGE_WINDOW = Duration.ofMinutes(1);
-	/** RuneLite's (10-minute cached) list is only used if the live list hasn't loaded for this long. */
-	private static final Duration LIVE_STALE_AFTER = Duration.ofMinutes(2);
+	/** How long counts read from the game client's own world list override RuneLite's older copy. */
+	private static final Duration CLIENT_COUNTS_FOR = Duration.ofMinutes(10);
 	private static final int MAX_HOP_ATTEMPTS = 5;
 	/** Ticks to ignore nearby-player changes after a login, hop or map load while players stream in. */
 	private static final int NEARBY_SETTLE_TICKS = 3;
@@ -112,9 +104,6 @@ public class PlayerCountPlugin extends Plugin
 
 	@Inject
 	private WorldService worldService;
-
-	@Inject
-	private OkHttpClient okHttpClient;
 
 	@Inject
 	private OverlayManager overlayManager;
@@ -170,11 +159,13 @@ public class PlayerCountPlugin extends Plugin
 		WorldStats.Totals totals;
 	}
 
-	// Set from the HTTP thread, read anywhere.
-	private volatile Instant lastLiveFetch;
-	private final AtomicBoolean fetchInFlight = new AtomicBoolean();
-
 	// Everything below is only touched on the client thread.
+	/** RuneLite's latest world list, before the game client's counts are laid over it. */
+	private WorldResult base;
+	private net.runelite.api.World[] lastClientList;
+	private int lastClientSum = -1;
+	private Map<Integer, Integer> clientCounts = Collections.emptyMap();
+	private Instant clientCountsAt;
 	/** Oldest first; the head is the +/- baseline, the tail is the latest. */
 	private final Deque<Sample> history = new ArrayDeque<>();
 	@Getter
@@ -331,13 +322,19 @@ public class PlayerCountPlugin extends Plugin
 		WorldListPanel.FLAG_SPRITES.forEach((region, sprite) ->
 			spriteManager.getSpriteAsync(sprite, 0, img -> flagTarget.setFlag(region, img)));
 
-		// Show RuneLite's copy straight away; the live list replaces it a moment later.
+		// Show RuneLite's copy straight away; the scheduled refresh keeps it current.
 		executor.execute(() ->
 		{
 			WorldResult cached = worldService.getWorlds();
-			if (cached != null && cached.getWorlds() != null && !liveIsFresh())
+			if (cached != null && cached.getWorlds() != null)
 			{
-				clientThread.invokeLater(() -> accept(cached));
+				clientThread.invokeLater(() ->
+				{
+					if (base == null)
+					{
+						acceptBase(cached);
+					}
+				});
 			}
 		});
 		scheduleRefresh();
@@ -380,9 +377,13 @@ public class PlayerCountPlugin extends Plugin
 			refreshTask.cancel(false);
 			refreshTask = null;
 		}
-		lastLiveFetch = null;
 		clientThread.invokeLater(() ->
 		{
+			base = null;
+			lastClientList = null;
+			lastClientSum = -1;
+			clientCounts = Collections.emptyMap();
+			clientCountsAt = null;
 			history.clear();
 			history6h.clear();
 			regionTotals = Collections.emptyMap();
@@ -406,75 +407,79 @@ public class PlayerCountPlugin extends Plugin
 			refreshTask.cancel(false);
 		}
 		int seconds = Math.max(PlayerCountConfig.MIN_REFRESH, config.refreshInterval());
-		refreshTask = executor.scheduleWithFixedDelay(this::fetchLive, 0, seconds, TimeUnit.SECONDS);
+		// RuneLite's WorldService stops refreshing on its own once you're logged in, so ask it to.
+		// It answers through WorldsFetch.
+		refreshTask = executor.scheduleWithFixedDelay(worldService::refresh, seconds, seconds, TimeUnit.SECONDS);
 	}
 
 	void refreshNow()
 	{
-		executor.execute(this::fetchLive);
+		worldService.refresh();
 	}
 
-	/** Downloads Jagex's live world list (async, so the shared executor is never blocked). */
-	private void fetchLive()
+	/**
+	 * Merges the game client's own world list, if it has refreshed since we last looked. The client only
+	 * reloads it now and then (on the login screen, or while the world switcher is open), but when it does,
+	 * its counts are current, unlike RuneLite's copy, which can be up to 10 minutes old.
+	 */
+	private void checkClientList()
 	{
-		if (!fetchInFlight.compareAndSet(false, true))
+		net.runelite.api.World[] list = client.getWorldList();
+		if (list == null || list.length == 0)
 		{
 			return;
 		}
-		Request request = new Request.Builder().url(SlrParser.URL).build();
-		okHttpClient.newCall(request).enqueue(new Callback()
+		int sum = 0;
+		for (net.runelite.api.World w : list)
 		{
-			@Override
-			public void onFailure(Call call, IOException e)
-			{
-				fetchInFlight.set(false);
-				log.debug("Live world list fetch failed", e);
-				fallBackIfStale();
-			}
-
-			@Override
-			public void onResponse(Call call, Response response)
-			{
-				try (ResponseBody body = response.body())
-				{
-					if (!response.isSuccessful() || body == null)
-					{
-						log.debug("Live world list returned HTTP {}", response.code());
-						fallBackIfStale();
-						return;
-					}
-					List<World> worlds = SlrParser.parse(body.bytes());
-					WorldResult result = new WorldResult();
-					result.setWorlds(worlds);
-					lastLiveFetch = Instant.now();
-					log.debug("Live world list: {} worlds, {} players", worlds.size(), WorldStats.totals(worlds).getTotal());
-					clientThread.invokeLater(() -> accept(result));
-				}
-				catch (IOException | RuntimeException e)
-				{
-					log.debug("Couldn't read live world list", e);
-					fallBackIfStale();
-				}
-				finally
-				{
-					fetchInFlight.set(false);
-				}
-			}
-		});
-	}
-
-	private boolean liveIsFresh()
-	{
-		Instant t = lastLiveFetch;
-		return t != null && Duration.between(t, Instant.now()).compareTo(LIVE_STALE_AFTER) < 0;
-	}
-
-	private void fallBackIfStale()
-	{
-		if (!liveIsFresh())
-		{
-			worldService.refresh(); // answers via WorldsFetch
+			sum += Math.max(0, w.getPlayerCount());
 		}
+		if (list == lastClientList && sum == lastClientSum)
+		{
+			return;
+		}
+		boolean first = lastClientList == null;
+		lastClientList = list;
+		lastClientSum = sum;
+		Map<Integer, Integer> counts = new HashMap<>();
+		for (net.runelite.api.World w : list)
+		{
+			counts.put(w.getId(), w.getPlayerCount());
+		}
+		clientCounts = counts;
+		clientCountsAt = Instant.now();
+		// A list already sitting there at start-up may be old; only trust ones we see change.
+		if (!first && base != null)
+		{
+			accept(base);
+		}
+	}
+
+	/** RuneLite's list with any fresh counts from the game client laid over it. */
+	private WorldResult withClientCounts(WorldResult result)
+	{
+		Map<Integer, Integer> counts = clientCounts;
+		Instant at = clientCountsAt;
+		if (counts.isEmpty() || at == null || Duration.between(at, Instant.now()).compareTo(CLIENT_COUNTS_FOR) > 0)
+		{
+			return result;
+		}
+		List<World> merged = new ArrayList<>(result.getWorlds().size());
+		for (World w : result.getWorlds())
+		{
+			Integer n = counts.get(w.getId());
+			merged.add(n == null || n == w.getPlayers() ? w : World.builder()
+				.id(w.getId())
+				.types(w.getTypes())
+				.address(w.getAddress())
+				.activity(w.getActivity())
+				.region(w.getRegion())
+				.players(n)
+				.build());
+		}
+		WorldResult out = new WorldResult();
+		out.setWorlds(merged);
+		return out;
 	}
 
 	@Subscribe
@@ -518,19 +523,26 @@ public class PlayerCountPlugin extends Plugin
 		});
 	}
 
-	/** RuneLite's own list. Only used while the live list is unavailable, since it lags by up to 10 minutes. */
+	/** RuneLite's world list, fetched by its WorldService (shared with the World Hopper). */
 	@Subscribe
 	public void onWorldsFetch(WorldsFetch e)
 	{
 		WorldResult result = e.getWorldResult();
-		if (result != null && result.getWorlds() != null && !liveIsFresh())
+		if (result != null && result.getWorlds() != null)
 		{
-			clientThread.invokeLater(() -> accept(result));
+			clientThread.invokeLater(() -> acceptBase(result));
 		}
 	}
 
-	private void accept(WorldResult result)
+	private void acceptBase(WorldResult result)
 	{
+		base = result;
+		accept(result);
+	}
+
+	private void accept(WorldResult raw)
+	{
+		WorldResult result = withClientCounts(raw);
 		Instant now = Instant.now();
 		List<World> worlds = result.getWorlds();
 		WorldStats.Totals totals = WorldStats.totals(worlds);
@@ -581,6 +593,7 @@ public class PlayerCountPlugin extends Plugin
 		friendsHere = config.showSocial() ? countFriendsHere() : -1;
 		clanHere = config.showSocial() ? countClanHere() : -1;
 
+		checkClientList();
 		updateSuggestion();
 		tickHop();
 		// Pings and "updated Xs ago" change between downloads, so refresh the sidebar every ~3s too.

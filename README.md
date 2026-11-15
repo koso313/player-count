@@ -121,10 +121,11 @@ Settings are grouped so you only open what you need:
 
 ## Data and network use
 
-- **Player counts** come from Jagex's live world list (`www.runescape.com/g=oldscape/slr.ws`), the
-  same list the in-game world switcher uses. It's downloaded every 30 seconds by default (5 seconds
-  minimum). If it can't be reached, the plugin falls back to RuneLite's own world list, which updates
-  every 10 minutes.
+- **Player counts** come from RuneLite's own world list (the same one the World Hopper uses); the
+  plugin downloads nothing extra for them. RuneLite updates that list about every 10 minutes, and the
+  plugin asks for the latest copy every 60 seconds by default. Whenever the game itself reloads its
+  world list (on the login screen, or while the world switcher is open), those exact counts are used
+  straight away.
 - **Ping** is measured by briefly opening a connection to each world server's game port, the way
   RuneLite's World Hopper does. Your current world is checked every 3 seconds (adjustable), favourites
   every 20 seconds, and every world one at a time every 2 minutes. Ping is colour-coded: green under

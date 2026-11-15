@@ -16,9 +16,9 @@ public interface PlayerCountConfig extends Config
 {
 	String GROUP = "playercount";
 
-	int MIN_REFRESH = 5;
+	int MIN_REFRESH = 60;
 	// RuneLite saves defaults on first load, so a new default needs a new key name.
-	String REFRESH_KEY = "updateInterval";
+	String REFRESH_KEY = "worldListRefresh";
 	String SIDEBAR_KEY = "showSidebar";
 	String SIZE_KEY = "overlaySizeOption";
 	String FAVORITES_KEY = "favoriteWorlds";
@@ -415,12 +415,12 @@ public interface PlayerCountConfig extends Config
 		return 30;
 	}
 
-	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to download Jagex's live world list", section = extrasSection, position = 3)
+	@ConfigItem(keyName = REFRESH_KEY, name = "Refresh every", description = "How often to ask RuneLite for its latest world list. RuneLite updates its copy about every 10 minutes; whenever the game reloads its own list (login screen or world switcher), those exact counts are used straight away", section = extrasSection, position = 3)
 	@Range(min = MIN_REFRESH, max = 600)
 	@Units(Units.SECONDS)
 	default int refreshInterval()
 	{
-		return 30;
+		return 60;
 	}
 
 	enum ArrivalMode
