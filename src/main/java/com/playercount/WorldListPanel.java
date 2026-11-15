@@ -818,7 +818,7 @@ class WorldListPanel extends PluginPanel
 		{
 			long secs = Duration.between(s.getUpdated(), Instant.now()).getSeconds();
 			updatedLabel.setText("Updated " + (secs < 60 ? secs + "s" : secs / 60 + "m") + " ago");
-			updatedLabel.setToolTipText("+/- figures are the change over the last minute");
+			updatedLabel.setToolTipText("+/- figures are the change since the previous update");
 		}
 
 		if (s.isFinderOff())
@@ -1227,7 +1227,7 @@ class WorldListPanel extends PluginPanel
 			Integer change = s.getChanges().get(w.getId());
 			if (change != null && change != 0)
 			{
-				t.append(String.format(" (%+d in the last minute)", change));
+				t.append(String.format(" (%+d since last update)", change));
 			}
 			int usual = s.getUsual().getOrDefault(w.getId(), -1);
 			if (usual >= 0)

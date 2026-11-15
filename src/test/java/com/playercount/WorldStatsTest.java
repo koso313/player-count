@@ -99,4 +99,16 @@ public class WorldStatsTest
 		assertEquals("950", PlayerCountOverlay.compact(950));
 		assertEquals("71.2k", PlayerCountOverlay.compact(71234));
 	}
+
+	@Test
+	public void sameCountsSpotsARepeatedUpdate()
+	{
+		List<World> a = Arrays.asList(world(301, 500, WorldRegion.UNITED_STATES_OF_AMERICA, "-"), world(302, 900, WorldRegion.UNITED_KINGDOM, "-"));
+		List<World> same = Arrays.asList(world(302, 900, WorldRegion.UNITED_KINGDOM, "-"), world(301, 500, WorldRegion.UNITED_STATES_OF_AMERICA, "-"));
+		List<World> changed = Arrays.asList(world(301, 501, WorldRegion.UNITED_STATES_OF_AMERICA, "-"), world(302, 900, WorldRegion.UNITED_KINGDOM, "-"));
+		List<World> fewer = Arrays.asList(world(301, 500, WorldRegion.UNITED_STATES_OF_AMERICA, "-"));
+		assertEquals(true, WorldStats.sameCounts(a, same));
+		assertEquals(false, WorldStats.sameCounts(a, changed));
+		assertEquals(false, WorldStats.sameCounts(a, fewer));
+	}
 }

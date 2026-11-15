@@ -12,7 +12,7 @@ history.
 
 ![Overlay in the OSRS steel frame](docs/overlay-steel.png)
 
-- **Your world's player count** and the **OSRS total**, each with its change over the last minute
+- **Your world's player count** and the **OSRS total**, each with its change since the last update
   (green for gains, red for losses).
 - Numbers update in place: the overlay keeps a steady width instead of shifting as digits change.
 - **Ping** to your world, **players nearby**, and how many **friends and clan members** are on your

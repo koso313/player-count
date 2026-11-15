@@ -1,5 +1,6 @@
 package com.playercount;
 
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -419,5 +420,28 @@ final class WorldStats
 		}
 		String a2 = region.getAlpha2();
 		return "GB".equals(a2) ? "UK" : a2;
+	}
+
+	/** True if both lists have the same worlds with the same player counts (a repeat of the same update). */
+	static boolean sameCounts(List<World> a, List<World> b)
+	{
+		if (a.size() != b.size())
+		{
+			return false;
+		}
+		Map<Integer, Integer> counts = new HashMap<>();
+		for (World w : a)
+		{
+			counts.put(w.getId(), w.getPlayers());
+		}
+		for (World w : b)
+		{
+			Integer n = counts.get(w.getId());
+			if (n == null || n != w.getPlayers())
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 }

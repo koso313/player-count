@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,8 +79,6 @@ import net.runelite.http.api.worlds.WorldResult;
 )
 public class PlayerCountPlugin extends Plugin
 {
-	/** The +/- figures compare against the sample from about this long ago. */
-	static final Duration CHANGE_WINDOW = Duration.ofMinutes(1);
 	/** How long counts read from the game client's own world list override RuneLite's older copy. */
 	private static final Duration CLIENT_COUNTS_FOR = Duration.ofMinutes(10);
 	private static final int MAX_HOP_ATTEMPTS = 5;
@@ -166,7 +163,7 @@ public class PlayerCountPlugin extends Plugin
 	private int lastClientSum = -1;
 	private Map<Integer, Integer> clientCounts = Collections.emptyMap();
 	private Instant clientCountsAt;
-	/** Oldest first; the head is the +/- baseline, the tail is the latest. */
+	/** At most two lists with different counts: the head is the +/- baseline, the tail is the latest. */
 	private final Deque<Sample> history = new ArrayDeque<>();
 	@Getter
 	private final PopulationHistory history6h = new PopulationHistory();
@@ -546,19 +543,15 @@ public class PlayerCountPlugin extends Plugin
 		Instant now = Instant.now();
 		List<World> worlds = result.getWorlds();
 		WorldStats.Totals totals = WorldStats.totals(worlds);
-		history.addLast(new Sample(now, result, totals));
-		// Keep exactly one sample at least CHANGE_WINDOW old as the baseline.
-		while (history.size() > 2)
+		// The +/- figures are the change since the previous update. RuneLite's list only changes every
+		// ~10 minutes, so a repeat of the same counts keeps the last change (and its time) on screen.
+		Sample last = history.peekLast();
+		if (last == null || !WorldStats.sameCounts(last.getResult().getWorlds(), worlds))
 		{
-			Iterator<Sample> it = history.iterator();
-			it.next();
-			if (Duration.between(it.next().getTime(), now).compareTo(CHANGE_WINDOW) >= 0)
+			history.addLast(new Sample(now, result, totals));
+			while (history.size() > 2)
 			{
 				history.removeFirst();
-			}
-			else
-			{
-				break;
 			}
 		}
 
@@ -659,7 +652,7 @@ public class PlayerCountPlugin extends Plugin
 		return s == null ? null : s.getResult();
 	}
 
-	/** The sample the +/- figures compare against, or null if there's only one. */
+	/** The previous update the +/- figures compare against, or null if there's only one. */
 	private Sample baseline()
 	{
 		return history.size() < 2 ? null : history.peekFirst();
@@ -1006,7 +999,7 @@ public class PlayerCountPlugin extends Plugin
 		Integer wc = currentWorldChange();
 		if (wc != null && wc != 0)
 		{
-			sb.append(String.format(" (%+,d/min)", wc));
+			sb.append(String.format(" (%+,d since last update)", wc));
 		}
 		WorldStats.Totals t = getTotals();
 		sb.append(String.format(" | OSRS: %,d (P2P %s, F2P %s)", t.getTotal(),

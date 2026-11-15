@@ -100,7 +100,7 @@ public interface PlayerCountConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "changeStyle", name = "Change (+/-)", description = "Show how your world and the total changed over the last minute: off, plain, or green for gains and red for losses", section = linesSection, position = 3)
+	@ConfigItem(keyName = "changeStyle", name = "Change (+/-)", description = "Show how your world and the total changed since the last update (about every 10 minutes): off, plain, or green for gains and red for losses", section = linesSection, position = 3)
 	default ChangeStyle changeStyle()
 	{
 		return ChangeStyle.COLOURED;
