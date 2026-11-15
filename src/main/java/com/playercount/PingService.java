@@ -40,6 +40,8 @@ class PingService
 	private volatile long lastSweep;
 	private final java.util.Queue<World> sweepQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
 	private volatile int sweepDone;
+	private volatile int lastCurrent;
+	private volatile long lastCurrentAt;
 
 	/**
 	 * @param worlds  latest world list (may be empty before the first download)
@@ -60,21 +62,30 @@ class PingService
 			t.setDaemon(true);
 			return t;
 		});
+		// Current world: checked every second, pinged straight away when it changes (login or hop),
+		// otherwise every currentEverySeconds.
+		long everyMs = Math.max(1, currentEverySeconds) * 1000L;
+		lastCurrent = 0;
+		lastCurrentAt = 0;
 		thread.scheduleWithFixedDelay(() -> safely(() ->
 		{
 			int id = current.getAsInt();
-			if (id > 0)
+			long now = System.currentTimeMillis();
+			if (id <= 0 || (id == lastCurrent && now - lastCurrentAt < everyMs))
 			{
-				for (World w : worlds.get())
+				return;
+			}
+			for (World w : worlds.get())
+			{
+				if (w.getId() == id)
 				{
-					if (w.getId() == id)
-					{
-						measure(w);
-						break;
-					}
+					lastCurrent = id;
+					lastCurrentAt = now;
+					measure(w);
+					break;
 				}
 			}
-		}), 1, Math.max(1, currentEverySeconds), TimeUnit.SECONDS);
+		}), 1, 1, TimeUnit.SECONDS);
 		thread.scheduleWithFixedDelay(() -> safely(() ->
 		{
 			Set<Integer> favs = first.get();
